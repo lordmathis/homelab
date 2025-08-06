@@ -1,8 +1,14 @@
 #!/bin/bash
 set -e
 
-# Get the latest release URL
-DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ggml-org/llama.cpp/releases/latest | grep "browser_download_url" | grep -E "(macos|darwin)" | grep -v "\.zip\.sig" | cut -d '"' -f 4)
+# Get the latest release URL for arm64
+DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ggml-org/llama.cpp/releases/latest | grep "browser_download_url" | grep "macos-arm64" | grep -v "\.zip\.sig" | cut -d '"' -f 4 | head -n 1)
+
+if [[ -z "$DOWNLOAD_URL" ]]; then
+    echo "Could not find download URL for macos-arm64"
+    exit 1
+fi
+
 INSTALL_DIR="$HOME/bin/llama-cpp"
 
 # Check dependencies
@@ -20,15 +26,31 @@ fi
 
 # Download and extract
 cd /tmp
+echo "Downloading llama.cpp from $DOWNLOAD_URL..."
 curl -L -o llama-cpp.zip "$DOWNLOAD_URL"
-unzip -q llama-cpp.zip
 
-# Install files (copy all binaries from build/bin)
-cp -r /tmp/build/bin/* "$INSTALL_DIR/"
+# Create a unique extraction directory to avoid conflicts
+EXTRACT_DIR="/tmp/llamacpp-extract-$$"
+mkdir -p "$EXTRACT_DIR"
+cd "$EXTRACT_DIR"
+unzip -q /tmp/llama-cpp.zip
+
+# Find the bin directory (it might be nested)
+BIN_DIR=$(find . -name "bin" -type d | head -n 1)
+if [[ -z "$BIN_DIR" ]]; then
+    echo "Could not find bin directory in extracted files"
+    echo "Contents:"
+    ls -la
+    exit 1
+fi
+
+# Install files (copy all binaries from bin directory)
+echo "Installing binaries from $BIN_DIR to $INSTALL_DIR"
+cp -r "$BIN_DIR"/* "$INSTALL_DIR/"
 chmod +x "$INSTALL_DIR"/*
 
-# Remove quarantine attributes (only for update scenario)
-if [ -d "$INSTALL_DIR" ]; then
+# Remove quarantine attributes (only for macOS)
+if [[ "$(uname)" == "Darwin" ]] && [ -d "$INSTALL_DIR" ]; then
     xattr -dr com.apple.quarantine "$INSTALL_DIR"/* 2>/dev/null || true
 fi
 
@@ -42,5 +64,5 @@ if ! grep -q "$INSTALL_DIR" "$SHELL_CONFIG" 2>/dev/null; then
 fi
 
 # Cleanup
-rm -rf /tmp/llama-* /tmp/llama-cpp.zip
+rm -rf "$EXTRACT_DIR" /tmp/llama-cpp.zip
 echo "Done. Installed to $INSTALL_DIR"
