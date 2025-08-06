@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.llamactl</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/matus/bin/llamactl/llamactl</string>
+    </array>
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>WorkingDirectory</key>
+    <string>/Users/matus/bin/llamactl</string>
+    <key>StandardOutPath</key>
+    <string>/Users/matus/Library/Logs/llamactl/llamactl.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/matus/Library/Logs/llamactl/llamactl.error.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/bin:/bin:/usr/sbin:/sbin:/Users/matus/bin:/Users/matus/bin/llama-cpp</string>
+    </dict>
+</dict>
+</plist>
