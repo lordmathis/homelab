@@ -6,14 +6,14 @@
     <string>com.llamactl</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/matus/bin/llamactl/llamactl</string>
+        <string>/Users/matus/bin/llamactl</string>
     </array>
     <key>RunAtLoad</key>
     <false/>
     <key>KeepAlive</key>
     <true/>
     <key>WorkingDirectory</key>
-    <string>/Users/matus/bin/llamactl</string>
+    <string>/Users/matus</string>
     <key>StandardOutPath</key>
     <string>/Users/matus/Library/Logs/llamactl/llamactl.log</string>
     <key>StandardErrorPath</key>
