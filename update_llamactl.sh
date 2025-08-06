@@ -12,11 +12,12 @@ command -v tar >/dev/null 2>&1 || { echo "tar required"; exit 1; }
 # Check if install path exists and clean it
 if [ -f "$INSTALL_PATH" ]; then
     echo "Removing existing installation..."
-    rm -r "$INSTALL_PATH"
+    rm  "$INSTALL_PATH"
 fi
 
 # Download and extract
 cd /tmp
+echo "Downloading llamactl from $DOWNLOAD_URL..."
 curl -L -o llamactl.tar.gz "$DOWNLOAD_URL"
 tar -xzf llamactl.tar.gz
 
