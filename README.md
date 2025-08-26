@@ -22,3 +22,13 @@ Local LLM inference and other apps on Mac Mini M4 Pro
    # Stop the service
    launchctl stop com.llamactl
    ```
+
+## Netdata
+
+```
+brew install netdata
+brew services start netdata
+```
+
+## Collima (docker)
+
