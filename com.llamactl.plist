@@ -21,7 +21,7 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/usr/bin:/bin:/usr/sbin:/sbin:/Users/matus/bin:/Users/matus/bin/llama-cpp</string>
+        <string>/usr/bin:/bin:/usr/sbin:/sbin:/Users/matus/bin:/opt/homebrew/bin</string>
     </dict>
 </dict>
 </plist>
