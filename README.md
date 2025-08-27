@@ -32,3 +32,15 @@ brew services start netdata
 
 ## Collima (docker)
 
+collima
+docker
+docker-completion
+docker-compose
+
+## Llama.cpp
+
+## Tools
+
+bat
+htop
+ncdu
