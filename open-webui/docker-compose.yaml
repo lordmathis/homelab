@@ -8,36 +8,20 @@ services:
       - open-webui:/app/backend/data
     restart: always
 
-  github-mcpo:
-    image: node:20-slim
-    container_name: github-mcpo
+  mcpo-server:
+    build: .
+    container_name: mcpo-server
     ports:
       - "10000:8000"
+    volumes:
+      - ./mcpo-config.json:/app/mcpo-config.json:ro
     environment:
-      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN}
-      - MCPO_API_KEY=${MCPO_API_KEY}
-    command: >
-      sh -c "
-      echo 'Installing system dependencies...' &&
-      apt-get update && apt-get install -y curl python3 python3-pip &&
-      echo 'Installing Node.js dependencies...' &&
-      npm install -g @modelcontextprotocol/server-github &&
-      echo 'Installing Python dependencies...' &&
-      pip3 install --break-system-packages uv &&
-      pip3 install --break-system-packages mcpo &&
-      echo 'Verifying installations...' &&
-      which mcpo &&
-      which npx &&
-      echo 'Starting Secure GitHub MCP through MCPO...' &&
-      mcpo --host 0.0.0.0 --port 8000 --api-key \$MCPO_API_KEY -- npx @modelcontextprotocol/server-github
-      "
+      GITHUB_PAT: ${GITHUB_PAT}
+      MCPO_API_KEY: ${MCPO_API_KEY}
+      GITEA_HOST: ${GITEA_HOST}
+      GITEA_ACCESS_TOKEN: ${GITEA_ACCESS_TOKEN}
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "-H", "X-API-Key: ${MCPO_API_KEY}", "http://localhost:8000/docs"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 90s
+
 
 volumes:
   open-webui:
