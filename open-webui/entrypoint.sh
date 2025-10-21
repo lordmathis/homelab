@@ -1,12 +1,22 @@
-#!/bin/sh
-# Fail fast if the key is missing
-if [ -z "$MCPO_API_KEY" ]; then
-  echo "Error: MCPO_API_KEY is not set" >&2
-  exit 1
-fi
+#!/bin/bash
+set -euo pipefail
 
-# Run the real binary, replacing the shell (so signals go straight to mcpo)
+# --------------------------------------------------------------
+#  1️⃣  Verify mandatory environment variables
+# --------------------------------------------------------------
+: "${MCPO_API_KEY:?MCPO_API_KEY is required}"
+: "${GITEA_HOST:-}"
+: "${GITEA_ACCESS_TOKEN:-}"
+: "${GITHUB_PAT:-}"
+
+# --------------------------------------------------------------
+#  2️⃣  Render the JSON configuration from the template
+# --------------------------------------------------------------
+envsubst < /app/mcpo-config.json.tmpl > /app/mcpo-config.json
+
+# --------------------------------------------------------------
+#  3️⃣  Finally start mcpo, replacing the shell process
+# --------------------------------------------------------------
 exec mcpo --host 0.0.0.0 --port 8000 \
           --api-key "$MCPO_API_KEY" \
           --config /app/mcpo-config.json \
-          --hot-reload
