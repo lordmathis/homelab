@@ -13,8 +13,6 @@ services:
     container_name: mcpo-server
     ports:
       - "10000:8000"
-    volumes:
-      - ./mcpo-config.json:/app/mcpo-config.json:ro
     environment:
       GITHUB_PAT: ${GITHUB_PAT}
       MCPO_API_KEY: ${MCPO_API_KEY}

@@ -39,6 +39,8 @@ docker-compose
 
 ## Llama.cpp
 
+brew install llama.cpp
+
 ## Tools
 
 bat
