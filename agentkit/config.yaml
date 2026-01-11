@@ -1,0 +1,21 @@
+mcps:
+  gitea:
+    command: ./gitea-mcp
+    type: "stdio"
+    args:
+      - "-t"
+      - "stdio"
+    env:
+      GITEA_HOST: "${GITEA_HOST}"
+      GITEA_ACCESS_TOKEN: "${GITEA_ACCESS_TOKEN}"
+  time:
+    command: uvx
+    type: "stdio"
+    args:
+      - mcp-server-time
+      - --local-timezone=Europe/Bratislava
+
+providers:
+  llamactl:
+    api_base: "https://llamactl.nmsny.dev/v1"
+    api_key: "${LLAMACTL_API_KEY}"
