@@ -1,0 +1,21 @@
+http {
+    map $subdomain $backend_port {
+        ${LLAMACTL_SUBDOMAIN} 9001;
+        ${OPENWEBUI_SUBDOMAIN} 9002;
+        ${MCPO_SUBDOMAIN} 9003;
+        default 9999;
+    }
+
+    server {
+        listen 9000;
+        server_name ~^(?<subdomain>.+)\.${BASE_DOMAIN}$;
+
+        location / {
+            proxy_pass http://localhost:$backend_port;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
