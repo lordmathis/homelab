@@ -16,13 +16,21 @@ set -a
 source .env
 set +a
 
+# Create .htpasswd file
+if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
+    echo "Error: USERNAME and PASSWORD must be set in .env file"
+    exit 1
+fi
+
+echo "Creating .htpasswd file..."
+htpasswd -bc .htpasswd "$USERNAME" "$PASSWORD"
+mv .htpasswd /opt/homebrew/etc/nginx/.htpasswd
+chmod 644 /opt/homebrew/etc/nginx/.htpasswd
+echo "✓ Created .htpasswd file"
+
 # Extract variable names from .env and format for envsubst
 ENV_VARS=$(grep -v '^#' .env | grep -v '^$' | cut -d= -f1 | sed 's/^/$/' | tr '\n' ' ')
-
-envsubst "$ENV_VARS" < nginx.conf.template > nginx.conf
-
-mkdir -p /opt/homebrew/etc/nginx/servers
-cp nginx.conf /opt/homebrew/etc/nginx/servers/lab-proxy.conf
+envsubst "$ENV_VARS" < nginx.conf.template > /opt/homebrew/etc/nginx/servers/lab-proxy.conf
 
 nginx -t
 
