@@ -3,7 +3,7 @@ services:
     image: ghcr.io/open-webui/open-webui:main
     container_name: open-webui
     ports:
-      - "3000:8080"
+      - "9002:8080"
     volumes:
       - open-webui:/app/backend/data
     restart: always
@@ -12,7 +12,7 @@ services:
     build: .
     container_name: mcpo-server
     ports:
-      - "10000:8000"
+      - "9003:8000"
     environment:
       GITHUB_PAT: ${GITHUB_PAT}
       MCPO_API_KEY: ${MCPO_API_KEY}
