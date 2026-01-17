@@ -1,0 +1,18 @@
+# Services
+brew "nginx"
+brew "netdata"
+
+# LLM Tools
+brew "llama.cpp"
+
+# Docker
+brew "colima"
+brew "docker"
+brew "docker-compose"
+
+# CLI Tools
+brew "htop"
+brew "ncdu"
+brew "neovim"
+brew "wget"
+brew "bat"
