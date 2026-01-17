@@ -21,10 +21,10 @@ ENV_VARS=$(grep -v '^#' .env | grep -v '^$' | cut -d= -f1 | sed 's/^/$/' | tr '\
 
 envsubst "$ENV_VARS" < nginx.conf.template > nginx.conf
 
-nginx -t -c "$(pwd)/nginx.conf"
-
 mkdir -p /opt/homebrew/etc/nginx/servers
 cp nginx.conf /opt/homebrew/etc/nginx/servers/lab-proxy.conf
+
+nginx -t
 
 brew services restart nginx
 

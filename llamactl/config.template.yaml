@@ -1,0 +1,8 @@
+server:
+  port: 9001
+instances:
+  max_running_instances: 1
+  port_range: [8000, 8100]
+auth:
+  management_keys:
+    - ${LLAMACTL_MGMT_KEY}
