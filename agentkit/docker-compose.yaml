@@ -1,0 +1,21 @@
+services:
+  agentkit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agentkit
+    restart: unless-stopped
+    environment:
+      GITEA_HOST: ${GITEA_HOST}
+      GITEA_ACCESS_TOKEN: ${GITEA_ACCESS_TOKEN}
+      LLAMACTL_API_BASE_URL: ${LLAMACTL_API_BASE_URL}
+      LLAMACTL_API_KEY: ${LLAMACTL_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      Z_AI_API_KEY: ${Z_AI_API_KEY}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+    ports:
+      - "9005:8000"
+    volumes:
+      - ./agents:/app/agents
+      - ./chatbots:/app/chatbots
+      - ./config.yaml:/app/config.yaml

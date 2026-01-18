@@ -1,6 +1,6 @@
 mcps:
   gitea:
-    command: ./gitea-mcp
+    command: gitea-mcp
     type: "stdio"
     args:
       - "-t"
@@ -17,5 +17,15 @@ mcps:
 
 providers:
   llamactl:
-    api_base: "https://llamactl.nmsny.dev/v1"
+    api_base: "${LLAMACTL_API_BASE_URL}"
     api_key: "${LLAMACTL_API_KEY}"
+  # openrouter:
+  #   api_base: "https://openrouter.ai/api/v1"
+  #   api_key: "${OPENROUTER_API_KEY}"
+  #   model_filter:
+  #     conditions:
+  #       - field: "id"
+  #         contains: ":free"
+  # z-ai:
+  #   api_key: "${Z_AI_API_KEY}"
+  #   api_base: "https://api.z.ai/api/paas/v4/"
