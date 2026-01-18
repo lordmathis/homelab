@@ -3,14 +3,13 @@ map $subdomain $backend_port {
     ${OPENWEBUI_SUBDOMAIN} 9002;
     ${MCPO_SUBDOMAIN} 9003;
     ${NETDATA_SUBDOMAIN} 9004;
+    ${AGENTKIT_SUBDOMAIN} 9005;
     default 9999;
 }
 
 map $subdomain $auth_required {
-    ${LLAMACTL_SUBDOMAIN} "off";
-    ${OPENWEBUI_SUBDOMAIN} "off";
-    ${MCPO_SUBDOMAIN} "off";
     ${NETDATA_SUBDOMAIN} "Restricted";
+    ${AGENTKIT_SUBDOMAIN} "Restricted";
     default "off";
 }
 
