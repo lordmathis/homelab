@@ -1,7 +1,7 @@
-FROM ghcr.io/lordmathis/agentkit:v1.0.0
+FROM ghcr.io/lordmathis/agentkit:v0.1.0
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG GITEA_MCP_VERSION=0.4.0
+ARG GITEA_MCP_VERSION=0.7.0
 
 # Install Node.js, npm, and other dependencies
 RUN apt-get update && \
