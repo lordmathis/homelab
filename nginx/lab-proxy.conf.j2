@@ -1,0 +1,70 @@
+# {{ service.subdomain }}.{{ base_domain }} {% if service.auth %}(Protected){% else %}(Public){% endif %}
+
+server {
+    listen 8080;
+    server_name {{ service.subdomain }}.{{ base_domain }};
+
+{% if service.auth %}
+    location = /authelia-verify {
+        internal;
+        
+        # Add authelia_url query parameter
+        proxy_pass {{ authelia_verify_url }}{{ authelia_verify_path }}?authelia_url=https://{{ authelia_domain }};
+        
+        ## Headers
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        
+        ## Forward cookies
+        proxy_set_header Cookie $http_cookie;
+        
+        ## Basic Proxy Configuration
+        proxy_set_header X-Original-Method $request_method;
+        proxy_set_header X-Original-URL https://$http_host$request_uri;
+        proxy_set_header X-Forwarded-Method $request_method;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Uri $request_uri;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        
+        ## Headers needed for Authelia
+        proxy_set_header Host {{ authelia_domain }};
+        proxy_set_header X-Forwarded-Ssl on;
+    }
+
+{% endif %}
+    location / {
+{% if service.auth %}
+        ## Send a subrequest to Authelia to verify if the user is authenticated and has permission to access the resource.
+        auth_request /authelia-verify;
+        
+        ## Set the $target_url variable based on the original request.
+        set $target_url https://$http_host$request_uri;
+        
+        ## Save the upstream response headers from Authelia to variables.
+        auth_request_set $user $upstream_http_remote_user;
+        auth_request_set $groups $upstream_http_remote_groups;
+        auth_request_set $name $upstream_http_remote_name;
+        auth_request_set $email $upstream_http_remote_email;
+        
+        ## Inject the response headers from the variables into the request made to the backend.
+        proxy_set_header Remote-User $user;
+        proxy_set_header Remote-Groups $groups;
+        proxy_set_header Remote-Name $name;
+        proxy_set_header Remote-Email $email;
+
+        ## If the subrequest returns 200 pass to the backend, if the subrequest returns 401 redirect to the portal.
+        error_page 401 =302 https://{{ authelia_domain }}/?rd=$target_url;
+
+{% endif %}
+        proxy_pass http://127.0.0.1:{{ service.port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_connect_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_read_timeout 600s;
+    }
+}
