@@ -1,5 +1,7 @@
 .env
 
-nginx.conf
 
 __pycache__/
+.venv/
+
+nginx/config.yaml

@@ -1,0 +1,13 @@
+base_domain: homelab.example.com
+authelia_domain: authelia.example.com
+authelia_verify_url: http://authelia-internal.my-tailnet.ts.net
+authelia_verify_path: /api/authz/auth-request
+
+services:
+  - subdomain: service
+    port: 9001
+    auth: false
+  
+  - subdomain: another-service
+    port: 9002
+    auth: true
