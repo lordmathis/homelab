@@ -16,6 +16,5 @@ services:
     ports:
       - "9005:8000"
     volumes:
-      - ./agents:/app/agents
       - ./chatbots:/app/chatbots
       - ./config.yaml:/app/config.yaml
