@@ -1,6 +1,7 @@
 # Services
 brew "nginx"
 brew "netdata"
+brew "glances"
 
 # LLM Tools
 brew "llama.cpp"
