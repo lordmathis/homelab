@@ -10,7 +10,7 @@
         <string>-w</string>
         <string>--browser</string>
         <string>-p</string>
-        <string>9004</string>
+        <string>9010</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
