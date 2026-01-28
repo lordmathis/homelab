@@ -4,6 +4,7 @@ brew "glances"
 
 # LLM Tools
 brew "llama.cpp"
+brew "whisper-cpp"
 
 # Docker
 brew "colima"
