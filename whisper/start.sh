@@ -13,7 +13,7 @@ MODEL_FILE="ggml-large-v3-turbo.bin"
 if [ ! -f "${SCRIPT_DIR}/${MODEL_FILE}" ]; then
     echo "Model file not found: ${MODEL_FILE}"
     echo "Downloading model from Hugging Face..."
-    uv run huggingface-cli download "$MODEL_REPO" "$MODEL_FILE" --local-dir "${SCRIPT_DIR}"
+    uv run hf download "$MODEL_REPO" "$MODEL_FILE" --local-dir "${SCRIPT_DIR}"
 
     if [ ! -f "${SCRIPT_DIR}/${MODEL_FILE}" ]; then
         echo "Failed to download model"
