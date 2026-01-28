@@ -14,7 +14,7 @@ services:
       Z_AI_API_KEY: ${Z_AI_API_KEY}
       GITHUB_TOKEN: ${GITHUB_TOKEN}
     ports:
-      - "9005:8000"
+      - "9002:8000"
     volumes:
       - ./chatbots:/app/chatbots
       - ./config.yaml:/app/config.yaml
