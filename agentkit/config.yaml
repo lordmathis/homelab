@@ -36,3 +36,5 @@ providers:
   z-ai:
     api_key: "${Z_AI_API_KEY}"
     api_base: "https://api.z.ai/api/paas/v4/"
+
+github_token: "${GITHUB_TOKEN}"

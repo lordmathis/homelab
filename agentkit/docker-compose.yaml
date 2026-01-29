@@ -13,8 +13,13 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       Z_AI_API_KEY: ${Z_AI_API_KEY}
       GITHUB_TOKEN: ${GITHUB_TOKEN}
+      OPENWEATHERMAP_API_KEY: ${OPENWEATHERMAP_API_KEY}
+      CALDAV_URL: ${CALDAV_URL}
+      CALDAV_USERNAME: ${CALDAV_USERNAME}
+      CALDAV_PASSWORD: ${CALDAV_PASSWORD}
     ports:
       - "9002:8000"
     volumes:
       - ./chatbots:/app/chatbots
+      - ./tools:/app/tools
       - ./config.yaml:/app/config.yaml
