@@ -14,6 +14,13 @@ mcps:
     args:
       - mcp-server-time
       - --local-timezone=Europe/Bratislava
+  openweathermap:
+    command: "npx"
+    type: "stdio"
+    args:
+      - "@tristau/openweathermap-mcp"
+      - "--apikey"
+      - ${OPENWEATHERMAP_API_KEY}
 
 providers:
   llamactl:
