@@ -19,3 +19,6 @@ RUN apt-get update && \
 
 # Install gitea-mcp
 RUN curl -L https://gitea.com/gitea/gitea-mcp/releases/download/v${GITEA_MCP_VERSION}/gitea-mcp_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin
+
+# Tools dependencies    
+RUN uv add caldav icalendar
