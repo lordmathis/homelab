@@ -25,8 +25,6 @@ logger = logging.getLogger(__name__)
 class CalDAVTools(ToolSetHandler):
     """Tools for managing tasks via CalDAV protocol"""
 
-    name = "tasks"
-
     def __init__(self):
         super().__init__(name="tasks")
         self._client: Optional[caldav.DAVClient] = None

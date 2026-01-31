@@ -23,3 +23,4 @@ services:
       - ./chatbots:/app/chatbots
       - ./tools:/app/tools
       - ./config.yaml:/app/config.yaml
+      - ./data:/app/data

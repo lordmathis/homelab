@@ -7,3 +7,5 @@ __pycache__/
 nginx/config.yaml
 
 *.bin
+
+agentkit/data/

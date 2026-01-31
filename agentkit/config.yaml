@@ -22,6 +22,12 @@ mcps:
       - "--apikey"
       - ${OPENWEATHERMAP_API_KEY}
 
+default_chat:
+  provider_id: "llamactl"
+  model_id: "GLM-47-Flash"
+  system_prompt: "You are a helpful AI assistant."
+  tool_servers: ["time", "notes", "tasks", "openweathermap"]
+
 providers:
   llamactl:
     api_base: "${LLAMACTL_API_BASE_URL}"
@@ -38,3 +44,4 @@ providers:
     api_base: "https://api.z.ai/api/paas/v4/"
 
 github_token: "${GITHUB_TOKEN}"
+history_db_path: "/app/data/agentkit.db"
