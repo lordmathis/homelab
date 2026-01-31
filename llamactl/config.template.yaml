@@ -6,3 +6,7 @@ instances:
 auth:
   management_keys:
     - ${LLAMACTL_MGMT_KEY}
+backends:
+  mlx:
+    command: "mlx_lm.server"
+    args: []
