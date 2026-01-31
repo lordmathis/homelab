@@ -1,0 +1,9 @@
+[project]
+name = "llamactl"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mlx-lm>=0.29.1",
+]
