@@ -1,48 +1,65 @@
 # Homelab
 
-Local LLM inference and other apps on Mac Mini M4 Pro
+Local AI services (LLM inference, chat, audio) and infrastructure on Mac Mini M4 Pro
 
-## llamactl launchd
+## Setup
 
-1. Symlink the plist file to `$HOME/Library/LaunchAgents/com.llamactl.plist`
-   ```bash
-   ln -sf $HOME/homelab/com.llamactl.plist $HOME/Library/LaunchAgents/com.llamactl.plist
-   ```
-
-2. Load the plist filr
-   ```bash
-   launchctl load $HOME/Library/LaunchAgents/com.llamactl.plist
-   ```
-
-3. Start and stop the service
-   ```bash
-   # Start the service manually (if not running)
-   launchctl start com.llamactl
-
-   # Stop the service
-   launchctl stop com.llamactl
-   ```
-
-## Netdata
-
-```
-brew install netdata
-brew services start netdata
+```sh
+cd homebrew
+brew bundle install
 ```
 
-## Collima (docker)
+## Services
 
-collima
-docker
-docker-completion
-docker-compose
+### LLamactl
 
-## Llama.cpp
+[Llamactl](https://github.com/lordmathis/llamactl) provides unified management and routing for llama.cpp, MLX and vLLM models with web dashboard.
 
-brew install llama.cpp
+```sh
+cd llamactl
+./setup.sh    # Initial setup
+./start.sh    # Start service
+./stop.sh     # Stop service
+```
 
-## Tools
+### AgentKit
 
-bat
-htop
-ncdu
+A flexible [chat client](https://github.com/lordmathis/agentkit) with Web UI that integrates multiple AI providers, tools, and agent frameworks through a unified plugin architecture.
+
+```sh
+cd agentkit
+docker-compose build  # Build service
+docker-compose up -d    # Start service
+docker-compose down     # Stop service
+```
+
+### Audio Service
+
+OpenAI-compatible audio API providing Speech-to-Text transcription and Text-to-Speech generation using [mlx-audio](https://github.com/Blaizzy/mlx-audio). Models are auto-loaded/unloaded based on usage.
+
+```sh
+cd audio
+./start.sh    # Start service
+./stop.sh     # Stop service
+```
+
+### Proxy
+
+Nginx reverse proxy configuration generator. Routes traffic to backend services with optional Authelia authentication.
+
+```sh
+cd nginx
+uv run setup.py  # Generates config and restarts Nginx
+
+brew services stop nginx    # Stop Nginx
+```
+
+### Monitoring
+
+Real-time system monitoring dashboard using [Glances](https://github.com/nicolargo/glances). Web-based UI for viewing CPU, memory, disk, and network stats.
+
+```sh
+cd glances
+./start.sh    # Start service
+./stop.sh     # Stop service
+```
