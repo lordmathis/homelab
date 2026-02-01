@@ -1,10 +1,7 @@
-import io
 import tempfile
 from contextlib import asynccontextmanager
 from typing import Literal, Optional
 
-import mlx.core as mx
-import soundfile as sf
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import PlainTextResponse, Response
 from pydantic import BaseModel
@@ -45,14 +42,12 @@ async def create_transcription(
         tmp.write(content)
         tmp_path = tmp.name
 
-    # Generate transcription
-    result = stt_model_manager.get_model().generate(audio=tmp_path)
+    text = stt_model_manager.transcribe(tmp_path)
 
-    # Return based on response format
     if response_format == "text":
-        return PlainTextResponse(content=result.text)
+        return PlainTextResponse(content=text)
 
-    return TranscriptionResponse(text=result.text)
+    return TranscriptionResponse(text=text)
 
 
 class SpeechRequest(BaseModel):
@@ -68,29 +63,8 @@ async def create_speech(request: SpeechRequest):
     Generates audio from the input text.
     Compatible with OpenAI's /v1/audio/speech endpoint.
     """
-    model = tts_model_manager.get_model()
-
-    # Generate speech - collect all audio chunks
-    audio_chunks = []
-    for result in model.generate(
-        request.input,
-        voice="Ryan",
-        language="English"
-        ):
-        audio_chunks.append(result.audio)
-
-    if not audio_chunks:
-        return Response(content=b"", media_type="audio/wav")
-
-    # Concatenate all chunks
-    audio = mx.concatenate(audio_chunks, axis=0)
-
-    # Convert to bytes
-    buffer = io.BytesIO()
-    sf.write(buffer, audio, samplerate=24000, format="WAV")
-    buffer.seek(0)
-
-    return Response(content=buffer.read(), media_type="audio/wav")
+    audio_bytes = tts_model_manager.generate_speech(request.input)
+    return Response(content=audio_bytes, media_type="audio/wav")
 
 
 if __name__ == "__main__":
