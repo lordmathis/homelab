@@ -4,7 +4,7 @@ from mlx_audio.stt.utils import load_model as load_stt_model
 from mlx_audio.tts.utils import load_model as load_tts_model
 
 STT_MODEL_NAME = "mlx-community/whisper-large-v3-turbo-asr-fp16"
-TTS_MODEL_NAME = "mlx-community/Kokoro-82M-bf16"
+TTS_MODEL_NAME = "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16"
 UNLOAD_TIMEOUT_SECONDS = 60 * 60  # 60 minutes
 
 

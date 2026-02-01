@@ -58,7 +58,6 @@ async def create_transcription(
 class SpeechRequest(BaseModel):
     model: str = "tts-1"
     input: str
-    voice: str = "af_heart"
     response_format: Literal["wav", "mp3", "flac", "opus"] = "wav"
     speed: float = 1.0
 
@@ -73,7 +72,11 @@ async def create_speech(request: SpeechRequest):
 
     # Generate speech - collect all audio chunks
     audio_chunks = []
-    for result in model.generate(request.input, voice=request.voice, speed=request.speed):
+    for result in model.generate(
+        request.input,
+        voice="Ryan",
+        language="English"
+        ):
         audio_chunks.append(result.audio)
 
     if not audio_chunks:
@@ -84,17 +87,10 @@ async def create_speech(request: SpeechRequest):
 
     # Convert to bytes
     buffer = io.BytesIO()
-    sf.write(buffer, audio, samplerate=24000, format=request.response_format.upper())
+    sf.write(buffer, audio, samplerate=24000, format="WAV")
     buffer.seek(0)
 
-    media_types = {
-        "wav": "audio/wav",
-        "mp3": "audio/mpeg",
-        "flac": "audio/flac",
-        "opus": "audio/opus",
-    }
-
-    return Response(content=buffer.read(), media_type=media_types[request.response_format])
+    return Response(content=buffer.read(), media_type="audio/wav")
 
 
 if __name__ == "__main__":

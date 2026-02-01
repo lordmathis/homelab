@@ -9,3 +9,5 @@ nginx/config.yaml
 *.bin
 
 agentkit/data/
+
+*.wav
