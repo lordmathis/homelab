@@ -17,8 +17,8 @@
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/tmp/glances.out.log</string>
+    <string>/Users/matus/Library/Logs/glances/glances.log</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/glances.err.log</string>
+    <string>/Users/matus/Library/Logs/glances/glances.error.log</string>
 </dict>
 </plist>

@@ -12,13 +12,18 @@
     </array>
     <key>WorkingDirectory</key>
     <string>/Users/matus/homelab/audio</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/tmp/audio.out.log</string>
+    <string>/Users/matus/Library/Logs/audio/audio.log</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/audio.err.log</string>
+    <string>/Users/matus/Library/Logs/audio/audio.error.log</string>
 </dict>
 </plist>
