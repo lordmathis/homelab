@@ -1,3 +1,5 @@
+import os
+import subprocess
 import tempfile
 from contextlib import asynccontextmanager
 from typing import Literal, Optional
@@ -42,7 +44,19 @@ async def create_transcription(
         tmp.write(content)
         tmp_path = tmp.name
 
-    text = stt_model_manager.transcribe(tmp_path)
+    # Convert to WAV format for consistent processing
+    wav_path = tmp_path + ".wav"
+    try:
+        subprocess.run(
+            ["ffmpeg", "-i", tmp_path, "-ar", "16000", "-ac", "1", "-y", wav_path],
+            check=True,
+            capture_output=True,
+        )
+        text = stt_model_manager.transcribe(wav_path)
+    finally:
+        os.unlink(tmp_path)
+        if os.path.exists(wav_path):
+            os.unlink(wav_path)
 
     if response_format == "text":
         return PlainTextResponse(content=text)
