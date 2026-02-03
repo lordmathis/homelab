@@ -20,7 +20,6 @@ services:
     ports:
       - "9002:8000"
     volumes:
-      - ./chatbots:/app/chatbots
-      - ./tools:/app/tools
+      - ./plugins:/app/plugins
       - ./config.yaml:/app/config.yaml
       - ./data:/app/data

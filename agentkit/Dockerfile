@@ -1,4 +1,4 @@
-FROM ghcr.io/lordmathis/agentkit:v5
+FROM ghcr.io/lordmathis/agentkit:v6
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG GITEA_MCP_VERSION=0.7.0
