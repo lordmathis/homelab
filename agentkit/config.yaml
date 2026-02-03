@@ -28,6 +28,11 @@ default_chat:
   system_prompt: "You are a helpful AI assistant."
   tool_servers: ["time", "notes", "tasks", "openweathermap"]
 
+plugins:
+  chatbots_dir: "/app/plugins/chatbots"
+  tools_dir: "/app/plugins/tools"
+  skills_dir: "/app/plugins/skills"
+
 providers:
   llamactl:
     api_base: "${LLAMACTL_API_BASE_URL}"
@@ -39,9 +44,9 @@ providers:
       conditions:
         - field: "id"
           contains: ":free"
-  z-ai:
-    api_key: "${Z_AI_API_KEY}"
-    api_base: "https://api.z.ai/api/paas/v4/"
+
+transcription:
+  base_url: "http://host.docker.internal:9100"
 
 github_token: "${GITHUB_TOKEN}"
 history_db_path: "/app/data/agentkit.db"
