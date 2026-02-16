@@ -1,4 +1,4 @@
-FROM ghcr.io/lordmathis/agentkit:v7
+FROM ghcr.io/lordmathis/agentkit:v8
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG GITEA_MCP_VERSION=0.8.0
@@ -18,7 +18,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Install gitea-mcp
-RUN curl -L https://gitea.com/gitea/gitea-mcp/releases/download/v${GITEA_MCP_VERSION}/gitea-mcp_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin
+RUN curl -L https://gitea.com/gitea/gitea-mcp/releases/download/v${GITEA_MCP_VERSION}/gitea-mcp_Linux_arm64.tar.gz | tar xz -C /usr/local/bin
 
 # Tools dependencies    
 RUN uv add caldav icalendar
