@@ -25,11 +25,11 @@ class WorkoutToolset(ToolSetHandler):
     async def initialize(self) -> None:
         """Initialize the toolset and database"""
         await super().initialize()
-        
+
         # Get persistent storage directory
         workspace = self._tool_manager.get_persistent_storage(self.server_name)
         self.db_path = os.path.join(workspace, "workouts.db")
-        
+
         # Initialize database schema
         self._init_db()
         logger.info(f"Workout database initialized at {self.db_path}")
@@ -39,7 +39,20 @@ class WorkoutToolset(ToolSetHandler):
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
-        
+
+        # Create exercises registry table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS exercises (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                display_name TEXT NOT NULL,
+                category TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_exercise_name ON exercises(name)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_exercise_category ON exercises(category)")
+
         # Create workouts table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS workouts (
@@ -50,32 +63,23 @@ class WorkoutToolset(ToolSetHandler):
             )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_workout_date ON workouts(date)")
-        
-        # Create exercises table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS exercises (
-                id TEXT PRIMARY KEY,
-                workout_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (workout_id) REFERENCES workouts(id) ON DELETE CASCADE
-            )
-        """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_exercise_workout ON exercises(workout_id)")
-        
+
         # Create workout_sets table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS workout_sets (
                 id TEXT PRIMARY KEY,
+                workout_id TEXT NOT NULL,
                 exercise_id TEXT NOT NULL,
                 set_number INTEGER NOT NULL,
                 reps INTEGER NOT NULL,
                 weight REAL,
                 notes TEXT,
                 created_at TEXT NOT NULL,
-                FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
+                FOREIGN KEY (workout_id) REFERENCES workouts(id) ON DELETE CASCADE,
+                FOREIGN KEY (exercise_id) REFERENCES exercises(id)
             )
         """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_set_workout ON workout_sets(workout_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_set_exercise ON workout_sets(exercise_id)")
 
         # Create templates table
@@ -94,18 +98,18 @@ class WorkoutToolset(ToolSetHandler):
             CREATE TABLE IF NOT EXISTS template_exercises (
                 id TEXT PRIMARY KEY,
                 template_id TEXT NOT NULL,
-                name TEXT NOT NULL,
+                exercise_id TEXT NOT NULL,
                 order_index INTEGER NOT NULL,
                 target_sets INTEGER NOT NULL,
                 target_reps_min INTEGER,
                 target_reps_max INTEGER,
                 created_at TEXT NOT NULL,
-                FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE
+                FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE,
+                FOREIGN KEY (exercise_id) REFERENCES exercises(id)
             )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_template_exercises_template ON template_exercises(template_id)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_template_exercises_name ON template_exercises(name)")
-        
+
         conn.commit()
         conn.close()
 
@@ -117,58 +121,65 @@ class WorkoutToolset(ToolSetHandler):
         return conn
 
     def _normalize_name(self, name: str) -> str:
-        return name.strip().lower()
+        return " ".join(name.strip().lower().split())
 
-    def _get_logged_exercise_names(self, workout_id: str, conn: sqlite3.Connection) -> List[str]:
+    def _find_or_create_exercise(self, name: str, category: Optional[str], conn: sqlite3.Connection) -> str:
+        """Find an exercise by normalized name or create it. Returns exercise ID."""
+        normalized = self._normalize_name(name)
+        row = conn.execute(
+            "SELECT id FROM exercises WHERE name = ?",
+            (normalized,)
+        ).fetchone()
+        if row:
+            return row["id"]
+
+        exercise_id = str(uuid.uuid4())
+        now = datetime.now(UTC).isoformat()
+        conn.execute(
+            "INSERT INTO exercises (id, name, display_name, category, created_at) VALUES (?, ?, ?, ?, ?)",
+            (exercise_id, normalized, name.strip(), category, now)
+        )
+        return exercise_id
+
+    def _get_logged_exercise_ids(self, workout_id: str, conn: sqlite3.Connection) -> List[str]:
         rows = conn.execute(
-            "SELECT name FROM exercises WHERE workout_id = ?",
+            "SELECT DISTINCT exercise_id FROM workout_sets WHERE workout_id = ?",
             (workout_id,)
         ).fetchall()
-        return [self._normalize_name(r["name"]) for r in rows]
+        return [r["exercise_id"] for r in rows]
 
-    def _get_last_exercise_sets(self, exercise_name: str, exclude_workout_id: Optional[str], conn: sqlite3.Connection) -> Dict[str, Any]:
-        name_norm = self._normalize_name(exercise_name)
+    def _get_last_exercise_sets(self, exercise_id: str, exclude_workout_id: Optional[str], conn: sqlite3.Connection) -> Dict[str, Any]:
         last_workout = conn.execute(
             """
             SELECT w.id, w.date
             FROM workouts w
-            JOIN exercises e ON e.workout_id = w.id
-            WHERE lower(e.name) = ?
+            JOIN workout_sets ws ON ws.workout_id = w.id
+            WHERE ws.exercise_id = ?
               AND (? IS NULL OR w.id != ?)
             ORDER BY w.date DESC
             LIMIT 1
             """,
-            (name_norm, exclude_workout_id, exclude_workout_id)
+            (exercise_id, exclude_workout_id, exclude_workout_id)
         ).fetchone()
 
         if not last_workout:
-            return {
-                "workout_id": None,
-                "date": None,
-                "sets": []
-            }
+            return {"workout_id": None, "date": None, "sets": []}
 
         sets = conn.execute(
             """
-            SELECT ws.set_number, ws.reps, ws.weight, ws.notes
-            FROM workout_sets ws
-            JOIN exercises e ON e.id = ws.exercise_id
-            WHERE e.workout_id = ? AND lower(e.name) = ?
-            ORDER BY ws.set_number
+            SELECT set_number, reps, weight, notes
+            FROM workout_sets
+            WHERE workout_id = ? AND exercise_id = ?
+            ORDER BY set_number
             """,
-            (last_workout["id"], name_norm)
+            (last_workout["id"], exercise_id)
         ).fetchall()
 
         return {
             "workout_id": last_workout["id"],
             "date": last_workout["date"],
             "sets": [
-                {
-                    "set": s["set_number"],
-                    "reps": s["reps"],
-                    "weight": s["weight"],
-                    "notes": s["notes"]
-                }
+                {"set": s["set_number"], "reps": s["reps"], "weight": s["weight"], "notes": s["notes"]}
                 for s in sets
             ]
         }
@@ -176,17 +187,19 @@ class WorkoutToolset(ToolSetHandler):
     def _get_template_exercises(self, template_id: str, conn: sqlite3.Connection) -> List[Dict[str, Any]]:
         rows = conn.execute(
             """
-            SELECT name, order_index, target_sets, target_reps_min, target_reps_max
-            FROM template_exercises
-            WHERE template_id = ?
-            ORDER BY order_index
+            SELECT te.exercise_id, e.display_name, te.order_index, te.target_sets, te.target_reps_min, te.target_reps_max
+            FROM template_exercises te
+            JOIN exercises e ON e.id = te.exercise_id
+            WHERE te.template_id = ?
+            ORDER BY te.order_index
             """,
             (template_id,)
         ).fetchall()
 
         return [
             {
-                "name": r["name"],
+                "exercise_id": r["exercise_id"],
+                "name": r["display_name"],
                 "order": r["order_index"],
                 "target_sets": r["target_sets"],
                 "target_reps_min": r["target_reps_min"],
@@ -200,27 +213,26 @@ class WorkoutToolset(ToolSetHandler):
         if not template_exercises:
             return {"completed": [], "remaining": [], "next": None}
 
-        sets_done_by_name = conn.execute(
+        sets_done_by_exercise = conn.execute(
             """
-            SELECT lower(e.name) AS name, COUNT(ws.id) AS sets_done
-            FROM exercises e
-            JOIN workout_sets ws ON ws.exercise_id = e.id
-            WHERE e.workout_id = ?
-            GROUP BY lower(e.name)
+            SELECT exercise_id, COUNT(id) AS sets_done
+            FROM workout_sets
+            WHERE workout_id = ?
+            GROUP BY exercise_id
             """,
             (workout_id,)
         ).fetchall()
 
-        sets_done_map = {r["name"]: r["sets_done"] for r in sets_done_by_name}
+        sets_done_map = {r["exercise_id"]: r["sets_done"] for r in sets_done_by_exercise}
 
         completed = []
         remaining = []
         for ex in template_exercises:
-            name_norm = self._normalize_name(ex["name"])
-            sets_done = sets_done_map.get(name_norm, 0)
+            sets_done = sets_done_map.get(ex["exercise_id"], 0)
             sets_remaining = max(ex["target_sets"] - sets_done, 0)
 
             entry = {
+                "exercise_id": ex["exercise_id"],
                 "name": ex["name"],
                 "order": ex["order"],
                 "target_sets": ex["target_sets"],
@@ -244,6 +256,113 @@ class WorkoutToolset(ToolSetHandler):
             "next": next_exercise
         }
 
+    def _get_next_set_number(self, workout_id: str, exercise_id: str, conn: sqlite3.Connection) -> int:
+        row = conn.execute(
+            "SELECT MAX(set_number) AS max_set FROM workout_sets WHERE workout_id = ? AND exercise_id = ?",
+            (workout_id, exercise_id)
+        ).fetchone()
+        return (row["max_set"] or 0) + 1
+
+    @tool(
+        description="Search the exercise registry by name or category",
+        parameters={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search query to match against exercise names"
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Filter by category (e.g. back, chest, legs, shoulders, arms, core)"
+                }
+            },
+            "required": []
+        }
+    )
+    async def search_exercises(self, query: Optional[str] = None, category: Optional[str] = None) -> Dict[str, Any]:
+        """Search the exercise registry"""
+        conn = self._get_conn()
+
+        conditions = []
+        params = []
+        if query:
+            conditions.append("name LIKE ?")
+            params.append(f"%{self._normalize_name(query)}%")
+        if category:
+            conditions.append("lower(category) = ?")
+            params.append(category.strip().lower())
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        rows = conn.execute(
+            f"SELECT id, display_name, category FROM exercises {where} ORDER BY display_name",
+            params
+        ).fetchall()
+
+        conn.close()
+        return {
+            "status": "success",
+            "count": len(rows),
+            "exercises": [
+                {"id": r["id"], "name": r["display_name"], "category": r["category"]}
+                for r in rows
+            ]
+        }
+
+    @tool(
+        description="Register a new exercise in the exercise registry",
+        parameters={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Exercise name"
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Category (e.g. back, chest, legs, shoulders, arms, core)"
+                }
+            },
+            "required": ["name"]
+        }
+    )
+    async def create_exercise(self, name: str, category: Optional[str] = None) -> Dict[str, Any]:
+        """Register a new exercise"""
+        normalized = self._normalize_name(name)
+        if not normalized:
+            raise ValueError("Exercise name cannot be empty")
+
+        conn = self._get_conn()
+
+        existing = conn.execute(
+            "SELECT id, display_name, category FROM exercises WHERE name = ?",
+            (normalized,)
+        ).fetchone()
+        if existing:
+            conn.close()
+            return {
+                "status": "already_exists",
+                "id": existing["id"],
+                "name": existing["display_name"],
+                "category": existing["category"]
+            }
+
+        exercise_id = str(uuid.uuid4())
+        now = datetime.now(UTC).isoformat()
+        conn.execute(
+            "INSERT INTO exercises (id, name, display_name, category, created_at) VALUES (?, ?, ?, ?, ?)",
+            (exercise_id, normalized, name.strip(), category, now)
+        )
+        conn.commit()
+        conn.close()
+
+        return {
+            "status": "success",
+            "id": exercise_id,
+            "name": name.strip(),
+            "category": category
+        }
+
     @tool(
         description="Start a new workout session",
         parameters={
@@ -261,7 +380,7 @@ class WorkoutToolset(ToolSetHandler):
         """Start a new workout session"""
         self.current_workout_id = str(uuid.uuid4())
         now = datetime.now(UTC).isoformat()
-        
+
         conn = self._get_conn()
         conn.execute(
             "INSERT INTO workouts (id, date, notes, created_at) VALUES (?, ?, ?, ?)",
@@ -269,11 +388,11 @@ class WorkoutToolset(ToolSetHandler):
         )
         conn.commit()
         conn.close()
-        
+
         return {
             "status": "success",
             "workout_id": self.current_workout_id,
-            "message": f"Started new workout session"
+            "message": "Started new workout session"
         }
 
     @tool(
@@ -291,7 +410,8 @@ class WorkoutToolset(ToolSetHandler):
                     "items": {
                         "type": "object",
                         "properties": {
-                            "name": {"type": "string"},
+                            "name": {"type": "string", "description": "Exercise name (will be registered if new)"},
+                            "category": {"type": "string", "description": "Exercise category"},
                             "order": {"type": "integer"},
                             "target_sets": {"type": "integer"},
                             "target_reps_min": {"type": "integer"},
@@ -318,10 +438,14 @@ class WorkoutToolset(ToolSetHandler):
             (template_id, name, 1, now)
         )
 
+        registered = []
         for idx, exercise in enumerate(exercises, 1):
             ex_name = exercise.get("name")
             if not ex_name:
                 raise ValueError("Each template exercise must include a name")
+
+            ex_category = exercise.get("category")
+            exercise_id = self._find_or_create_exercise(ex_name, ex_category, conn)
 
             order_index = exercise.get("order", idx)
             target_sets = exercise.get("target_sets", 3)
@@ -331,11 +455,12 @@ class WorkoutToolset(ToolSetHandler):
             conn.execute(
                 """
                 INSERT INTO template_exercises
-                    (id, template_id, name, order_index, target_sets, target_reps_min, target_reps_max, created_at)
+                    (id, template_id, exercise_id, order_index, target_sets, target_reps_min, target_reps_max, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (str(uuid.uuid4()), template_id, ex_name, order_index, target_sets, target_reps_min, target_reps_max, now)
+                (str(uuid.uuid4()), template_id, exercise_id, order_index, target_sets, target_reps_min, target_reps_max, now)
             )
+            registered.append({"name": ex_name, "exercise_id": exercise_id})
 
         conn.commit()
         conn.close()
@@ -344,7 +469,7 @@ class WorkoutToolset(ToolSetHandler):
             "status": "success",
             "template_id": template_id,
             "name": name,
-            "exercise_count": len(exercises)
+            "exercises": registered
         }
 
     @tool(
@@ -381,25 +506,7 @@ class WorkoutToolset(ToolSetHandler):
             }
 
             if include_exercises:
-                exercises = conn.execute(
-                    """
-                    SELECT name, order_index, target_sets, target_reps_min, target_reps_max
-                    FROM template_exercises
-                    WHERE template_id = ?
-                    ORDER BY order_index
-                    """,
-                    (t["id"],)
-                ).fetchall()
-                item["exercises"] = [
-                    {
-                        "name": e["name"],
-                        "order": e["order_index"],
-                        "target_sets": e["target_sets"],
-                        "target_reps_min": e["target_reps_min"],
-                        "target_reps_max": e["target_reps_max"]
-                    }
-                    for e in exercises
-                ]
+                item["exercises"] = self._get_template_exercises(t["id"], conn)
 
             result.append(item)
 
@@ -415,16 +522,15 @@ class WorkoutToolset(ToolSetHandler):
         parameters={
             "type": "object",
             "properties": {
-                "exercise_name": {"type": "string", "description": "Exercise name"},
+                "exercise_id": {"type": "string", "description": "Exercise ID"},
                 "workout_id": {"type": "string", "description": "Workout ID (uses current if not provided)"}
             },
-            "required": ["exercise_name"]
+            "required": ["exercise_id"]
         }
     )
-    async def infer_template(self, exercise_name: str, workout_id: Optional[str] = None) -> Dict[str, Any]:
-        """Infer the template based on exercise name and current workout progress"""
+    async def infer_template(self, exercise_id: str, workout_id: Optional[str] = None) -> Dict[str, Any]:
+        """Infer the template based on exercise and current workout progress"""
         target_workout_id = workout_id or self.current_workout_id
-        name_norm = self._normalize_name(exercise_name)
 
         conn = self._get_conn()
 
@@ -433,9 +539,9 @@ class WorkoutToolset(ToolSetHandler):
             SELECT DISTINCT t.id, t.name
             FROM templates t
             JOIN template_exercises te ON te.template_id = t.id
-            WHERE t.active = 1 AND lower(te.name) = ?
+            WHERE t.active = 1 AND te.exercise_id = ?
             """,
-            (name_norm,)
+            (exercise_id,)
         ).fetchall()
 
         if not candidates:
@@ -451,7 +557,7 @@ class WorkoutToolset(ToolSetHandler):
         else:
             reason = "best_overlap"
             if target_workout_id:
-                logged = set(self._get_logged_exercise_names(target_workout_id, conn))
+                logged = set(self._get_logged_exercise_ids(target_workout_id, conn))
             else:
                 logged = set()
 
@@ -459,8 +565,8 @@ class WorkoutToolset(ToolSetHandler):
             chosen = candidates[0]
             for cand in candidates:
                 templ_ex = self._get_template_exercises(cand["id"], conn)
-                templ_names = {self._normalize_name(e["name"]) for e in templ_ex}
-                score = len(templ_names.intersection(logged))
+                templ_ids = {e["exercise_id"] for e in templ_ex}
+                score = len(templ_ids.intersection(logged))
                 if score > best_score:
                     best_score = score
                     chosen = cand
@@ -469,7 +575,7 @@ class WorkoutToolset(ToolSetHandler):
         if target_workout_id:
             progress = self._compute_template_progress(chosen["id"], target_workout_id, conn)
 
-        last_perf = self._get_last_exercise_sets(exercise_name, target_workout_id, conn)
+        last_perf = self._get_last_exercise_sets(exercise_id, target_workout_id, conn)
 
         conn.close()
         return {
@@ -516,55 +622,56 @@ class WorkoutToolset(ToolSetHandler):
         parameters={
             "type": "object",
             "properties": {
-                "exercise_name": {"type": "string", "description": "Exercise name"},
+                "exercise_id": {"type": "string", "description": "Exercise ID"},
                 "limit": {"type": "integer", "description": "Number of recent workouts to include"}
             },
-            "required": ["exercise_name"]
+            "required": ["exercise_id"]
         }
     )
-    async def get_exercise_history(self, exercise_name: str, limit: int = 3) -> Dict[str, Any]:
+    async def get_exercise_history(self, exercise_id: str, limit: int = 3) -> Dict[str, Any]:
         """Get recent history for a specific exercise"""
         if limit <= 0:
             raise ValueError("Limit must be greater than 0")
 
-        name_norm = self._normalize_name(exercise_name)
         conn = self._get_conn()
+
+        exercise = conn.execute(
+            "SELECT display_name FROM exercises WHERE id = ?",
+            (exercise_id,)
+        ).fetchone()
+        if not exercise:
+            conn.close()
+            raise ValueError(f"Exercise {exercise_id} not found")
 
         workouts = conn.execute(
             """
             SELECT DISTINCT w.id, w.date
             FROM workouts w
-            JOIN exercises e ON e.workout_id = w.id
-            WHERE lower(e.name) = ?
+            JOIN workout_sets ws ON ws.workout_id = w.id
+            WHERE ws.exercise_id = ?
             ORDER BY w.date DESC
             LIMIT ?
             """,
-            (name_norm, limit)
+            (exercise_id, limit)
         ).fetchall()
 
         history = []
         for w in workouts:
             sets = conn.execute(
                 """
-                SELECT ws.set_number, ws.reps, ws.weight, ws.notes
-                FROM workout_sets ws
-                JOIN exercises e ON e.id = ws.exercise_id
-                WHERE e.workout_id = ? AND lower(e.name) = ?
-                ORDER BY ws.set_number
+                SELECT set_number, reps, weight, notes
+                FROM workout_sets
+                WHERE workout_id = ? AND exercise_id = ?
+                ORDER BY set_number
                 """,
-                (w["id"], name_norm)
+                (w["id"], exercise_id)
             ).fetchall()
 
             history.append({
                 "workout_id": w["id"],
                 "date": w["date"],
                 "sets": [
-                    {
-                        "set": s["set_number"],
-                        "reps": s["reps"],
-                        "weight": s["weight"],
-                        "notes": s["notes"]
-                    }
+                    {"set": s["set_number"], "reps": s["reps"], "weight": s["weight"], "notes": s["notes"]}
                     for s in sets
                 ]
             })
@@ -572,7 +679,8 @@ class WorkoutToolset(ToolSetHandler):
         conn.close()
         return {
             "status": "success",
-            "exercise": exercise_name,
+            "exercise_id": exercise_id,
+            "exercise_name": exercise["display_name"],
             "count": len(history),
             "history": history
         }
@@ -582,9 +690,9 @@ class WorkoutToolset(ToolSetHandler):
         parameters={
             "type": "object",
             "properties": {
-                "exercise_name": {
+                "exercise_id": {
                     "type": "string",
-                    "description": "Name of the exercise"
+                    "description": "Exercise ID from the exercise registry"
                 },
                 "sets_data": {
                     "type": "array",
@@ -612,73 +720,79 @@ class WorkoutToolset(ToolSetHandler):
                     "description": "Include template progress and last performance guidance"
                 }
             },
-            "required": ["exercise_name", "sets_data"]
+            "required": ["exercise_id", "sets_data"]
         }
     )
-    async def log_exercise(self, exercise_name: str, sets_data: List[Dict[str, Any]],
+    async def log_exercise(self, exercise_id: str, sets_data: List[Dict[str, Any]],
                           workout_id: Optional[str] = None, template_id: Optional[str] = None,
                           include_guidance: bool = False) -> Dict[str, Any]:
         """Log an exercise with multiple sets"""
         target_workout_id = workout_id or self.current_workout_id
         if not target_workout_id:
             raise ValueError("No active workout. Start a workout first with start_workout.")
-        
-        exercise_id = str(uuid.uuid4())
-        now = datetime.now(UTC).isoformat()
-        
+
         conn = self._get_conn()
-        conn.execute(
-            "INSERT INTO exercises (id, workout_id, name, created_at) VALUES (?, ?, ?, ?)",
-            (exercise_id, target_workout_id, exercise_name, now)
-        )
-        
-        # Add sets
-        for idx, set_data in enumerate(sets_data, 1):
+
+        # Verify exercise exists
+        exercise = conn.execute(
+            "SELECT display_name FROM exercises WHERE id = ?",
+            (exercise_id,)
+        ).fetchone()
+        if not exercise:
+            conn.close()
+            raise ValueError(f"Exercise {exercise_id} not found. Use search_exercises or create_exercise first.")
+
+        # Get next set number for incremental logging
+        start_set = self._get_next_set_number(target_workout_id, exercise_id, conn)
+
+        for idx, set_data in enumerate(sets_data):
             reps = set_data.get("reps")
             weight = set_data.get("weight")
             notes = set_data.get("notes")
-            
+
             if not isinstance(reps, int) or reps <= 0:
                 raise ValueError(f"Invalid reps: {reps}")
-            
-            set_id = str(uuid.uuid4())
-            conn.execute(
-                "INSERT INTO workout_sets (id, exercise_id, set_number, reps, weight, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (set_id, exercise_id, idx, reps, weight, notes, now)
-            )
-        
-        conn.commit()
-        conn.close()
 
+            set_id = str(uuid.uuid4())
+            now = datetime.now(UTC).isoformat()
+            conn.execute(
+                "INSERT INTO workout_sets (id, workout_id, exercise_id, set_number, reps, weight, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (set_id, target_workout_id, exercise_id, start_set + idx, reps, weight, notes, now)
+            )
+
+        conn.commit()
+
+        exercise_name = exercise["display_name"]
         response = {
             "status": "success",
-            "exercise_name": exercise_name,
             "exercise_id": exercise_id,
+            "exercise_name": exercise_name,
             "sets_logged": len(sets_data),
-            "message": f"Logged {exercise_name} - {len(sets_data)} sets"
+            "message": f"Logged {exercise_name} - {len(sets_data)} set(s)"
         }
 
         if include_guidance:
-            conn = self._get_conn()
             inferred = None
             progress = None
             if template_id:
                 progress = self._compute_template_progress(template_id, target_workout_id, conn)
             else:
-                inferred = await self.infer_template(exercise_name, target_workout_id)
+                conn.close()
+                inferred = await self.infer_template(exercise_id, target_workout_id)
+                conn = self._get_conn()
                 if inferred.get("status") == "success":
                     template_id = inferred["template"]["id"]
                     progress = inferred.get("progress")
 
-            last_perf = self._get_last_exercise_sets(exercise_name, target_workout_id, conn)
+            last_perf = self._get_last_exercise_sets(exercise_id, target_workout_id, conn)
             response["guidance"] = {
                 "template_inference": inferred,
                 "template_id": template_id,
                 "progress": progress,
                 "last_performance": last_perf
             }
-            conn.close()
 
+        conn.close()
         return response
 
     @tool(
@@ -699,54 +813,61 @@ class WorkoutToolset(ToolSetHandler):
         target_workout_id = workout_id or self.current_workout_id
         if not target_workout_id:
             raise ValueError("No workout specified.")
-        
+
         conn = self._get_conn()
-        
-        # Get workout
-        workout = conn.execute(
-            "SELECT * FROM workouts WHERE id = ?",
-            (target_workout_id,)
-        ).fetchone()
-        
-        if not workout:
+        summary = self._get_workout_summary_sync(target_workout_id, conn)
+        if not summary:
             conn.close()
             raise ValueError(f"Workout {target_workout_id} not found")
-        
-        # Get exercises
-        exercises = conn.execute(
-            "SELECT * FROM exercises WHERE workout_id = ?",
-            (target_workout_id,)
+
+        conn.close()
+        return summary
+
+    def _get_workout_summary_sync(self, workout_id: str, conn: sqlite3.Connection) -> Dict[str, Any]:
+        """Synchronous version of get_workout_summary for internal use"""
+        workout = conn.execute(
+            "SELECT * FROM workouts WHERE id = ?",
+            (workout_id,)
+        ).fetchone()
+
+        if not workout:
+            return {}
+
+        # Get all sets grouped by exercise
+        rows = conn.execute(
+            """
+            SELECT e.id AS exercise_id, e.display_name, ws.set_number, ws.reps, ws.weight, ws.notes
+            FROM workout_sets ws
+            JOIN exercises e ON e.id = ws.exercise_id
+            WHERE ws.workout_id = ?
+            ORDER BY ws.created_at, ws.set_number
+            """,
+            (workout_id,)
         ).fetchall()
-        
-        result = {
+
+        # Group by exercise
+        exercises_map: Dict[str, Dict[str, Any]] = {}
+        for r in rows:
+            eid = r["exercise_id"]
+            if eid not in exercises_map:
+                exercises_map[eid] = {
+                    "exercise_id": eid,
+                    "name": r["display_name"],
+                    "sets": []
+                }
+            exercises_map[eid]["sets"].append({
+                "set": r["set_number"],
+                "reps": r["reps"],
+                "weight": r["weight"],
+                "notes": r["notes"]
+            })
+
+        return {
             "id": workout["id"],
             "date": workout["date"],
             "notes": workout["notes"],
-            "exercises": []
+            "exercises": list(exercises_map.values())
         }
-        
-        for exercise in exercises:
-            sets = conn.execute(
-                "SELECT * FROM workout_sets WHERE exercise_id = ? ORDER BY set_number",
-                (exercise["id"],)
-            ).fetchall()
-            
-            exercise_data = {
-                "name": exercise["name"],
-                "sets": [
-                    {
-                        "set": s["set_number"],
-                        "reps": s["reps"],
-                        "weight": s["weight"],
-                        "notes": s["notes"]
-                    }
-                    for s in sets
-                ]
-            }
-            result["exercises"].append(exercise_data)
-        
-        conn.close()
-        return result
 
     @tool(
         description="Get recent workouts",
@@ -765,68 +886,24 @@ class WorkoutToolset(ToolSetHandler):
         """Get recent workouts"""
         if limit <= 0:
             raise ValueError("Limit must be greater than 0")
-        
+
         conn = self._get_conn()
         workouts = conn.execute(
             "SELECT id FROM workouts ORDER BY date DESC LIMIT ?",
             (limit,)
         ).fetchall()
-        
+
         result = {
             "status": "success",
             "count": len(workouts),
             "workouts": []
         }
-        
+
         for workout_row in workouts:
             summary = self._get_workout_summary_sync(workout_row["id"], conn)
             result["workouts"].append(summary)
-        
-        conn.close()
-        return result
 
-    def _get_workout_summary_sync(self, workout_id: str, conn: sqlite3.Connection) -> Dict[str, Any]:
-        """Synchronous version of get_workout_summary for internal use"""
-        workout = conn.execute(
-            "SELECT * FROM workouts WHERE id = ?",
-            (workout_id,)
-        ).fetchone()
-        
-        if not workout:
-            return {}
-        
-        exercises = conn.execute(
-            "SELECT * FROM exercises WHERE workout_id = ?",
-            (workout_id,)
-        ).fetchall()
-        
-        result = {
-            "id": workout["id"],
-            "date": workout["date"],
-            "notes": workout["notes"],
-            "exercises": []
-        }
-        
-        for exercise in exercises:
-            sets = conn.execute(
-                "SELECT * FROM workout_sets WHERE exercise_id = ? ORDER BY set_number",
-                (exercise["id"],)
-            ).fetchall()
-            
-            exercise_data = {
-                "name": exercise["name"],
-                "sets": [
-                    {
-                        "set": s["set_number"],
-                        "reps": s["reps"],
-                        "weight": s["weight"],
-                        "notes": s["notes"]
-                    }
-                    for s in sets
-                ]
-            }
-            result["exercises"].append(exercise_data)
-        
+        conn.close()
         return result
 
     @tool(
@@ -846,20 +923,20 @@ class WorkoutToolset(ToolSetHandler):
         """End current workout session"""
         if not self.current_workout_id:
             raise ValueError("No active workout session")
-        
+
         conn = self._get_conn()
         summary = self._get_workout_summary_sync(self.current_workout_id, conn)
-        
+
         if final_notes:
             conn.execute(
                 "UPDATE workouts SET notes = ? WHERE id = ?",
                 (final_notes, self.current_workout_id)
             )
             conn.commit()
-        
+
         conn.close()
         self.current_workout_id = None
-        
+
         return {
             "status": "success",
             "message": "Workout session ended",
