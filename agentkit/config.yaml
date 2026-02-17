@@ -57,7 +57,8 @@ default_chat:
     - Maintain consistency across the conversation
     
     When uncertain about what action to take, explain your reasoning and ask for guidance.
-  tool_servers: ["time", "notes", "tasks", "openweathermap"]
+  tool_servers: ["time", "notes", "tasks", "openweathermap", "workout"]
+  max_iterations: 20
 
 plugins:
   chatbots_dir: "/app/plugins/chatbots"
