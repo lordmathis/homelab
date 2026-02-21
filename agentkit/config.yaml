@@ -57,7 +57,7 @@ default_chat:
     - Maintain consistency across the conversation
     
     When uncertain about what action to take, explain your reasoning and ask for guidance.
-  tool_servers: ["time", "notes", "tasks", "openweathermap", "workout"]
+  tool_servers: ["time", "notes", "tasks", "openweathermap", "workout", "anki"]
   max_iterations: 20
 
 plugins:
