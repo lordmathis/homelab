@@ -66,20 +66,17 @@ class STTModelManager(ModelManager):
 class TTSModelManager(ModelManager):
     def __init__(self):
         super().__init__()
-        self.model_name = "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16"
-        self.voice = "Ryan"
-        self.language = "English"
-        self.sample_rate = 24000
+        self.model_name = "mlx-community/chatterbox-fp16"
 
     def _load_model(self):
         return load_tts_model(self.model_name)
 
-    def generate_speech(self, text: str) -> bytes:
+    def generate_speech(self, text: str, lang_code: str = "en") -> bytes:
         """Generate speech audio from text. Returns WAV bytes."""
         model = self._get_model()
 
         audio_chunks = []
-        for result in model.generate(text, voice=self.voice, language=self.language):
+        for result in model.generate(text, lang_code=lang_code):
             audio_chunks.append(result.audio)
 
         if not audio_chunks:
@@ -88,7 +85,7 @@ class TTSModelManager(ModelManager):
         audio = mx.concatenate(audio_chunks, axis=0)
 
         buffer = io.BytesIO()
-        sf.write(buffer, audio, samplerate=self.sample_rate, format="WAV")
+        sf.write(buffer, audio, samplerate=model.sample_rate, format="WAV")
         buffer.seek(0)
 
         return buffer.read()

@@ -67,6 +67,8 @@ async def create_transcription(
 class SpeechRequest(BaseModel):
     model: str = "tts-1"
     input: str
+    voice: str = "alloy"
+    language: str = "en"
     response_format: Literal["wav", "mp3", "flac", "opus"] = "wav"
     speed: float = 1.0
 
@@ -77,7 +79,7 @@ async def create_speech(request: SpeechRequest):
     Generates audio from the input text.
     Compatible with OpenAI's /v1/audio/speech endpoint.
     """
-    audio_bytes = tts_model_manager.generate_speech(request.input)
+    audio_bytes = tts_model_manager.generate_speech(request.input, lang_code=request.language)
     return Response(content=audio_bytes, media_type="audio/wav")
 
 
