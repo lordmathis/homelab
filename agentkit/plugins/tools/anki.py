@@ -15,7 +15,7 @@ class AnkiTool(ToolSetHandler):
     ANKI_CONNECT_URL = "http://host.docker.internal:8765"
     AUDIO_SERVICE_URL = "http://host.docker.internal:9100"
     ANKI_CONNECT_VERSION = 6
-    DECK_NAME = "German"
+    DECK_NAME = "German::Sentences"
 
     def __init__(self, name: str = "anki"):
         super().__init__(name)
