@@ -1,7 +1,7 @@
 import base64
 import logging
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import aiohttp
 
@@ -15,6 +15,7 @@ class AnkiTool(ToolSetHandler):
     ANKI_CONNECT_URL = "http://host.docker.internal:8765"
     AUDIO_SERVICE_URL = "http://host.docker.internal:9100"
     ANKI_CONNECT_VERSION = 6
+    DECK_NAME = "German"
 
     def __init__(self, name: str = "anki"):
         super().__init__(name)
@@ -54,35 +55,43 @@ class AnkiTool(ToolSetHandler):
         })
 
     @tool(
-        description="List all available Anki decks",
+        description=f"List cards in the Anki deck, showing the front and back of each card",
         parameters={
             "type": "object",
             "properties": {}
         }
     )
-    async def list_decks(self) -> Dict[str, Any]:
+    async def list_cards(self) -> Dict[str, Any]:
         try:
-            decks = await self._anki_request("deckNames")
-            return {"status": "success", "decks": decks}
+            note_ids = await self._anki_request("findNotes", {"query": f"deck:{self.DECK_NAME}"})
+            if not note_ids:
+                return {"status": "success", "deck": self.DECK_NAME, "cards": []}
+            notes_info = await self._anki_request("notesInfo", {"notes": note_ids})
+            cards = [
+                {
+                    "note_id": note["noteId"],
+                    "front": note["fields"]["Front"]["value"],
+                    "back": note["fields"]["Back"]["value"],
+                    "tags": note.get("tags", []),
+                }
+                for note in notes_info
+            ]
+            return {"status": "success", "deck": self.DECK_NAME, "cards": cards}
         except Exception as e:
-            logger.error(f"Error listing decks: {e}", exc_info=True)
+            logger.error(f"Error listing cards: {e}", exc_info=True)
             return {"status": "error", "error": str(e)}
 
     @tool(
         description=(
-            "Add an English-German flashcard to an Anki deck. "
+            "Add an English-German flashcard to Anki. "
             "The front side contains the English sentence and its audio. "
             "The back side contains the German sentence, its audio, and optional notes. "
-            "The deck is created automatically if it does not exist. "
-            "Audio is generated via TTS for both sentences."
+            "Audio is generated via TTS for both sentences. "
+            "The collection is synced to AnkiWeb automatically after adding."
         ),
         parameters={
             "type": "object",
             "properties": {
-                "deck_name": {
-                    "type": "string",
-                    "description": "Name of the Anki deck to add the card to"
-                },
                 "english_sentence": {
                     "type": "string",
                     "description": "English sentence shown on the front of the card"
@@ -96,16 +105,16 @@ class AnkiTool(ToolSetHandler):
                     "description": "Optional notes for the back of the card (grammar, context, etc.)"
                 }
             },
-            "required": ["deck_name", "english_sentence", "german_sentence"]
+            "required": ["english_sentence", "german_sentence"]
         }
     )
     async def add_card(
         self,
-        deck_name: str,
         english_sentence: str,
         german_sentence: str,
         notes: str = ""
     ) -> Dict[str, Any]:
+        deck_name = self.DECK_NAME
         try:
             # Ensure deck exists
             await self._anki_request("createDeck", {"deck": deck_name})
@@ -142,6 +151,8 @@ class AnkiTool(ToolSetHandler):
                 }
             })
 
+            await self._anki_request("sync")
+
             return {
                 "status": "success",
                 "note_id": note_id,
@@ -153,19 +164,4 @@ class AnkiTool(ToolSetHandler):
 
         except Exception as e:
             logger.error(f"Error adding Anki card: {e}", exc_info=True)
-            return {"status": "error", "error": str(e)}
-
-    @tool(
-        description="Trigger a sync of the local Anki collection to AnkiWeb",
-        parameters={
-            "type": "object",
-            "properties": {}
-        }
-    )
-    async def sync(self) -> Dict[str, Any]:
-        try:
-            await self._anki_request("sync")
-            return {"status": "success"}
-        except Exception as e:
-            logger.error(f"Error syncing Anki: {e}", exc_info=True)
             return {"status": "error", "error": str(e)}
