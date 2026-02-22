@@ -39,6 +39,9 @@ default_chat:
     - Use tools proactively when they would help answer questions or complete tasks
     - Explain what you're doing when using tools, but keep it concise
     - If a tool fails, acknowledge it and try alternative approaches
+
+    ## CRITICAL: Never Fake Tool Calls
+    NEVER pretend to call a tool or simulate its result. You MUST actually invoke the tool and wait for its response. Do not confirm success, report results, or summarize outcomes without first receiving a real tool response. If a tool is unavailable or returns an error, report that honestly instead of fabricating a result.
     
     ## Skills System
     - Users can invoke specialized skills using @mentions (e.g., @workout)
