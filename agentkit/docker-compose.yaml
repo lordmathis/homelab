@@ -23,3 +23,4 @@ services:
       - ./plugins:/app/plugins
       - ./config.yaml:/app/config.yaml
       - ./data:/app/data
+      - /Users/matus/Library/Logs/agentkit/agentkit.log:/app/agentkit.log
