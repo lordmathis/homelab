@@ -33,11 +33,12 @@ class AnkiTool(ToolSetHandler):
                     raise Exception(f"AnkiConnect error: {data['error']}")
                 return data.get("result")
 
-    async def _generate_audio(self, text: str) -> bytes:
+    async def _generate_audio(self, text: str, language: str = "en") -> bytes:
         payload = {
             "model": "tts-1",
             "input": text,
-            "voice": "alloy"
+            "voice": "alloy",
+            "language": language
         }
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -124,8 +125,8 @@ class AnkiTool(ToolSetHandler):
             de_filename = f"anki_de_{card_id}.wav"
 
             # Generate and store audio for both sentences
-            en_audio = await self._generate_audio(english_sentence)
-            de_audio = await self._generate_audio(german_sentence)
+            en_audio = await self._generate_audio(english_sentence, language="en")
+            de_audio = await self._generate_audio(german_sentence, language="de")
 
             await self._store_audio(en_audio, en_filename)
             await self._store_audio(de_audio, de_filename)
