@@ -6,7 +6,7 @@ class DefaultChatbot(ReActAgentPlugin):
     name = "Default"
     provider_id = "llamactl"
     model_id = "GLM-47-Flash"
-    tool_servers = ["time", "notes", "tasks", "openweathermap", "workout", "anki", "skills"]
+    tool_servers = ["time", "knowledge_base", "tasks", "skills"]
     max_iterations = 20
 
     system_prompt = """
