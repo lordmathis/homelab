@@ -4,16 +4,16 @@ from agentkit.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
 
-GERMAN_REPO = "German"
+NOTES_REPO = "Notes"
 
 
-class GermanNotesTool(ToolSetHandler):
+class KnowledgeBaseTool(ToolSetHandler):
 
-    def __init__(self, name: str = "german_notes"):
+    def __init__(self, name: str = "knowledge_base"):
         super().__init__(name)
 
     @tool(
-        description="List all German learning notes as a file tree",
+        description="List all knowledge base notes as a file tree",
         parameters={
             "type": "object",
             "properties": {
@@ -27,11 +27,11 @@ class GermanNotesTool(ToolSetHandler):
     )
     async def list_notes(self, path: str = "") -> str:
         return await self.call_other_tool(
-            "gitea_notes", "list_notes", {"repo": GERMAN_REPO, "path": path}
+            "gitea_notes", "list_notes", {"repo": NOTES_REPO, "path": path}
         )
 
     @tool(
-        description="Get the content of a specific German learning note",
+        description="Get the content of a specific knowledge base note",
         parameters={
             "type": "object",
             "properties": {
@@ -45,11 +45,11 @@ class GermanNotesTool(ToolSetHandler):
     )
     async def get_note(self, filepath: str) -> str:
         return await self.call_other_tool(
-            "gitea_notes", "get_note", {"repo": GERMAN_REPO, "filepath": filepath}
+            "gitea_notes", "get_note", {"repo": NOTES_REPO, "filepath": filepath}
         )
 
     @tool(
-        description="Create a new German learning note with specified content",
+        description="Create a new knowledge base note with specified content",
         parameters={
             "type": "object",
             "properties": {
@@ -73,5 +73,5 @@ class GermanNotesTool(ToolSetHandler):
     async def create_note(self, filepath: str, content: str, commit_message: str = "Create note") -> str:
         return await self.call_other_tool(
             "gitea_notes", "create_note",
-            {"repo": GERMAN_REPO, "filepath": filepath, "content": content, "commit_message": commit_message}
+            {"repo": NOTES_REPO, "filepath": filepath, "content": content, "commit_message": commit_message}
         )
