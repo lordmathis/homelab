@@ -9,6 +9,7 @@ Local AI services (LLM inference, chat, audio) and infrastructure on Mac Mini M4
 | llamactl | launchd | LLM model management / routing (llama.cpp, MLX, vLLM) |
 | agentkit | Docker (Colima) | Chat UI with tools and skills |
 | glances | launchd | System monitoring dashboard |
+| logdy | launchd | Log viewer UI |
 | audio | launchd | OpenAI-compatible STT + TTS API |
 
 Nginx reverse-proxies all services with optional authentication. Audio is internal only.
@@ -24,7 +25,7 @@ brew bundle install
 
 Secrets go in `.env` files (gitignored). Never commit them. Python projects use `uv` with `pyproject.toml`.
 
-## LLamactl
+## Llamactl
 
 [Llamactl](https://github.com/lordmathis/llamactl) provides unified management and routing for llama.cpp, MLX and vLLM models with web dashboard. Config is generated from `config.template.yaml` via `setup.sh` (uses `envsubst`).
 
@@ -87,6 +88,16 @@ Real-time system monitoring dashboard using [Glances](https://github.com/nicolar
 
 ```sh
 cd glances
+./start.sh    # Start service
+./stop.sh     # Stop service
+```
+
+## Logdy
+
+Web-based log viewer using [Logdy](https://logdy.dev). Follows logs from all services (llamactl, audio, glances, agentkit) on port 9011.
+
+```sh
+cd logdy
 ./start.sh    # Start service
 ./stop.sh     # Stop service
 ```
