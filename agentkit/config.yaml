@@ -39,6 +39,9 @@ providers:
         - field: "id"
           contains: ":free"
 
+logging:
+  target: "/app/logs/agentkit.log"
+
 transcription:
   base_url: "http://host.docker.internal:9100"
 
