@@ -5,22 +5,12 @@ services:
       dockerfile: Dockerfile
     container_name: agentkit
     restart: unless-stopped
-    environment:
-      GITEA_HOST: ${GITEA_HOST}
-      GITEA_ACCESS_TOKEN: ${GITEA_ACCESS_TOKEN}
-      LLAMACTL_API_BASE_URL: ${LLAMACTL_API_BASE_URL}
-      LLAMACTL_API_KEY: ${LLAMACTL_API_KEY}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      Z_AI_API_KEY: ${Z_AI_API_KEY}
-      GITHUB_TOKEN: ${GITHUB_TOKEN}
-      OPENWEATHERMAP_API_KEY: ${OPENWEATHERMAP_API_KEY}
-      CALDAV_URL: ${CALDAV_URL}
-      CALDAV_USERNAME: ${CALDAV_USERNAME}
-      CALDAV_PASSWORD: ${CALDAV_PASSWORD}
+    env_file:
+      - .env
     ports:
       - "9002:8000"
     volumes:
       - ./plugins:/app/plugins
       - ./config.yaml:/app/config.yaml
       - ./data:/app/data
-      - /Users/matus/Library/Logs/agentkit/agentkit.log:/app/agentkit.log
+      - ./logs:/app/logs
