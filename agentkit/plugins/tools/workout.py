@@ -518,6 +518,93 @@ class WorkoutToolset(ToolSetHandler):
         }
 
     @tool(
+        description="Update an existing workout template",
+        parameters={
+            "type": "object",
+            "properties": {
+                "template_id": {"type": "string", "description": "Template ID to update"},
+                "name": {"type": "string", "description": "New template name"},
+                "active": {"type": "boolean", "description": "Set template active status"},
+                "exercises": {
+                    "type": "array",
+                    "description": "New exercises list (replaces existing)",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string", "description": "Exercise name (will be registered if new)"},
+                            "category": {"type": "string", "description": "Exercise category"},
+                            "order": {"type": "integer"},
+                            "target_sets": {"type": "integer"},
+                            "target_reps_min": {"type": "integer"},
+                            "target_reps_max": {"type": "integer"}
+                        },
+                        "required": ["name"]
+                    }
+                }
+            },
+            "required": ["template_id"]
+        }
+    )
+    async def update_template(self, template_id: str, name: Optional[str] = None,
+                              active: Optional[bool] = None,
+                              exercises: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        """Update an existing workout template"""
+        conn = self._get_conn()
+
+        template = conn.execute(
+            "SELECT * FROM templates WHERE id = ?",
+            (template_id,)
+        ).fetchone()
+
+        if not template:
+            conn.close()
+            return {"status": "error", "message": f"Template {template_id} not found"}
+
+        if name is not None:
+            conn.execute("UPDATE templates SET name = ? WHERE id = ?", (name, template_id))
+
+        if active is not None:
+            conn.execute("UPDATE templates SET active = ? WHERE id = ?", (1 if active else 0, template_id))
+
+        if exercises is not None:
+            conn.execute("DELETE FROM template_exercises WHERE template_id = ?", (template_id,))
+
+            now = datetime.now(UTC).isoformat()
+            registered = []
+            for idx, exercise in enumerate(exercises, 1):
+                ex_name = exercise.get("name")
+                if not ex_name:
+                    conn.close()
+                    return {"status": "error", "message": "Each template exercise must include a name"}
+
+                ex_category = exercise.get("category")
+                exercise_id = self._find_or_create_exercise(ex_name, ex_category, conn)
+
+                order_index = exercise.get("order", idx)
+                target_sets = exercise.get("target_sets", 3)
+                target_reps_min = exercise.get("target_reps_min")
+                target_reps_max = exercise.get("target_reps_max")
+
+                conn.execute(
+                    """
+                    INSERT INTO template_exercises
+                        (id, template_id, exercise_id, order_index, target_sets, target_reps_min, target_reps_max, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (str(uuid.uuid4()), template_id, exercise_id, order_index, target_sets, target_reps_min, target_reps_max, now)
+                )
+                registered.append({"name": ex_name, "exercise_id": exercise_id})
+
+        conn.commit()
+        conn.close()
+
+        return {
+            "status": "success",
+            "template_id": template_id,
+            "message": "Template updated successfully"
+        }
+
+    @tool(
         description="Infer the most likely workout template from an exercise",
         parameters={
             "type": "object",
