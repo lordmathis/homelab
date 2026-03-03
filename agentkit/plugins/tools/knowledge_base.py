@@ -75,3 +75,31 @@ class KnowledgeBaseTool(ToolSetHandler):
             "gitea_notes", "create_note",
             {"repo": NOTES_REPO, "filepath": filepath, "content": content, "commit_message": commit_message}
         )
+
+    @tool(
+        description="Update an existing knowledge base note with new content",
+        parameters={
+            "type": "object",
+            "properties": {
+                "filepath": {
+                    "type": "string",
+                    "description": "Path to the note file to update"
+                },
+                "content": {
+                    "type": "string",
+                    "description": "New content for the note"
+                },
+                "commit_message": {
+                    "type": "string",
+                    "description": "Optional commit message",
+                    "default": "Update note"
+                }
+            },
+            "required": ["filepath", "content"]
+        }
+    )
+    async def update_note(self, filepath: str, content: str, commit_message: str = "Update note") -> str:
+        return await self.call_other_tool(
+            "gitea_notes", "update_note",
+            {"repo": NOTES_REPO, "filepath": filepath, "content": content, "commit_message": commit_message}
+        )
