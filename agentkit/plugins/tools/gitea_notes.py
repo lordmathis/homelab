@@ -170,3 +170,52 @@ class GiteaNotes(ToolSetHandler):
         except Exception as e:
             logger.error(f"Error creating note '{filepath}': {e}", exc_info=True)
             return f"Error creating note: {str(e)}"
+
+    @tool(
+        description="Update an existing note with new content in a Gitea repository",
+        parameters={
+            "type": "object",
+            "properties": {
+                "repo": {
+                    "type": "string",
+                    "description": "Name of the Gitea repository"
+                },
+                "filepath": {
+                    "type": "string",
+                    "description": "Path to the note file to update"
+                },
+                "content": {
+                    "type": "string",
+                    "description": "New content for the note"
+                },
+                "commit_message": {
+                    "type": "string",
+                    "description": "Optional commit message",
+                    "default": "Update note"
+                }
+            },
+            "required": ["repo", "filepath", "content"]
+        }
+    )
+    async def update_note(self, repo: str, filepath: str, content: str, commit_message: str = "Update note") -> str:
+        try:
+            logger.debug(f"Updating note: repo='{repo}' filepath='{filepath}'")
+
+            await self.call_other_tool(
+                GITEA_SERVER,
+                "update_file",
+                {
+                    "owner": REPO_OWNER,
+                    "repo": repo,
+                    "filePath": filepath,
+                    "content": content,
+                    "message": commit_message,
+                    "branch_name": DEFAULT_BRANCH
+                }
+            )
+
+            return f"Successfully updated note: {filepath}"
+
+        except Exception as e:
+            logger.error(f"Error updating note '{filepath}': {e}", exc_info=True)
+            return f"Error updating note: {str(e)}"
