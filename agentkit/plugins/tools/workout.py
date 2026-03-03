@@ -330,7 +330,7 @@ class WorkoutToolset(ToolSetHandler):
         """Register a new exercise"""
         normalized = self._normalize_name(name)
         if not normalized:
-            raise ValueError("Exercise name cannot be empty")
+            return {"status": "error", "message": "Exercise name cannot be empty"}
 
         conn = self._get_conn()
 
@@ -427,7 +427,7 @@ class WorkoutToolset(ToolSetHandler):
     async def create_template(self, name: str, exercises: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Create a workout template"""
         if not exercises:
-            raise ValueError("Template exercises cannot be empty")
+            return {"status": "error", "message": "Template exercises cannot be empty"}
 
         template_id = str(uuid.uuid4())
         now = datetime.now(UTC).isoformat()
@@ -442,7 +442,7 @@ class WorkoutToolset(ToolSetHandler):
         for idx, exercise in enumerate(exercises, 1):
             ex_name = exercise.get("name")
             if not ex_name:
-                raise ValueError("Each template exercise must include a name")
+                return {"status": "error", "message": "Each template exercise must include a name"}
 
             ex_category = exercise.get("category")
             exercise_id = self._find_or_create_exercise(ex_name, ex_category, conn)
@@ -604,7 +604,7 @@ class WorkoutToolset(ToolSetHandler):
         """Get template progress for a workout"""
         target_workout_id = workout_id or self.current_workout_id
         if not target_workout_id:
-            raise ValueError("No workout specified.")
+            return {"status": "error", "message": "No workout specified."}
 
         conn = self._get_conn()
         progress = self._compute_template_progress(template_id, target_workout_id, conn)
@@ -631,7 +631,7 @@ class WorkoutToolset(ToolSetHandler):
     async def get_exercise_history(self, exercise_id: str, limit: int = 3) -> Dict[str, Any]:
         """Get recent history for a specific exercise"""
         if limit <= 0:
-            raise ValueError("Limit must be greater than 0")
+            return {"status": "error", "message": "Limit must be greater than 0"}
 
         conn = self._get_conn()
 
@@ -641,7 +641,7 @@ class WorkoutToolset(ToolSetHandler):
         ).fetchone()
         if not exercise:
             conn.close()
-            raise ValueError(f"Exercise {exercise_id} not found")
+            return {"status": "error", "message": f"Exercise {exercise_id} not found"}
 
         workouts = conn.execute(
             """
@@ -729,7 +729,7 @@ class WorkoutToolset(ToolSetHandler):
         """Log an exercise with multiple sets"""
         target_workout_id = workout_id or self.current_workout_id
         if not target_workout_id:
-            raise ValueError("No active workout. Start a workout first with start_workout.")
+            return {"status": "error", "message": "No active workout. Start a workout first with start_workout."}
 
         conn = self._get_conn()
 
@@ -740,7 +740,7 @@ class WorkoutToolset(ToolSetHandler):
         ).fetchone()
         if not exercise:
             conn.close()
-            raise ValueError(f"Exercise {exercise_id} not found. Use search_exercises or create_exercise first.")
+            return {"status": "error", "message": f"Exercise {exercise_id} not found. Use search_exercises or create_exercise first."}
 
         # Get next set number for incremental logging
         start_set = self._get_next_set_number(target_workout_id, exercise_id, conn)
@@ -751,7 +751,7 @@ class WorkoutToolset(ToolSetHandler):
             notes = set_data.get("notes")
 
             if not isinstance(reps, int) or reps <= 0:
-                raise ValueError(f"Invalid reps: {reps}")
+                return {"status": "error", "message": f"Invalid reps: {reps}"}
 
             set_id = str(uuid.uuid4())
             now = datetime.now(UTC).isoformat()
@@ -812,13 +812,13 @@ class WorkoutToolset(ToolSetHandler):
         """Get a summary of a workout"""
         target_workout_id = workout_id or self.current_workout_id
         if not target_workout_id:
-            raise ValueError("No workout specified.")
+            return {"status": "error", "message": "No workout specified."}
 
         conn = self._get_conn()
         summary = self._get_workout_summary_sync(target_workout_id, conn)
         if not summary:
             conn.close()
-            raise ValueError(f"Workout {target_workout_id} not found")
+            return {"status": "error", "message": f"Workout {target_workout_id} not found"}
 
         conn.close()
         return summary
@@ -885,7 +885,7 @@ class WorkoutToolset(ToolSetHandler):
     async def get_history(self, limit: int = 10) -> Dict[str, Any]:
         """Get recent workouts"""
         if limit <= 0:
-            raise ValueError("Limit must be greater than 0")
+            return {"status": "error", "message": "Limit must be greater than 0"}
 
         conn = self._get_conn()
         workouts = conn.execute(
@@ -922,7 +922,7 @@ class WorkoutToolset(ToolSetHandler):
     async def end_workout(self, final_notes: Optional[str] = None) -> Dict[str, Any]:
         """End current workout session"""
         if not self.current_workout_id:
-            raise ValueError("No active workout session")
+            return {"status": "error", "message": "No active workout session"}
 
         conn = self._get_conn()
         summary = self._get_workout_summary_sync(self.current_workout_id, conn)

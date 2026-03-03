@@ -11,7 +11,7 @@ Required environment variables:
 
 import os
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from datetime import datetime, timezone
 import caldav
 from caldav.elements import dav
@@ -38,8 +38,8 @@ class CalDAVTools(ToolSetHandler):
         await super().initialize()
         
         if not all([self._url, self._username, self._password]):
-            raise ValueError(
-                "CalDAV configuration incomplete. "
+            return (
+                "Error: CalDAV configuration incomplete. "
                 "Set CALDAV_URL, CALDAV_USERNAME, and CALDAV_PASSWORD environment variables."
             )
 
@@ -54,7 +54,7 @@ class CalDAVTools(ToolSetHandler):
             logger.info("Successfully connected to CalDAV server")
         except Exception as e:
             logger.error(f"Failed to connect to CalDAV server: {e}", exc_info=True)
-            raise
+            return f"Error: Failed to connect to CalDAV server: {e}"
 
     async def cleanup(self):
         """Clean up CalDAV connection"""
@@ -70,14 +70,14 @@ class CalDAVTools(ToolSetHandler):
             "required": []
         }
     )
-    async def get_task_lists(self) -> List[Dict[str, str]]:
+    async def get_task_lists(self) -> Union[str, List[Dict[str, str]]]:
         """Retrieve all task lists from the CalDAV server
         
         Returns:
             List of dictionaries containing list information (id, name, url)
         """
         if not self._principal:
-            raise RuntimeError("CalDAV client not initialized")
+            return "Error: CalDAV client not initialized"
 
         try:
             calendars = self._principal.calendars()
@@ -102,7 +102,7 @@ class CalDAVTools(ToolSetHandler):
             
         except Exception as e:
             logger.error(f"Error retrieving task lists: {e}", exc_info=True)
-            raise
+            return f"Error: {e}"
 
     @tool(
         description="List all tasks in a specific task list",
@@ -126,7 +126,7 @@ class CalDAVTools(ToolSetHandler):
         self, 
         list_url: str, 
         include_completed: bool = False
-    ) -> List[Dict[str, Any]]:
+    ) -> Union[str, List[Dict[str, Any]]]:
         """List all tasks in a specific task list
         
         Args:
@@ -137,7 +137,7 @@ class CalDAVTools(ToolSetHandler):
             List of task dictionaries with uid, summary, status, priority, etc.
         """
         if not self._client:
-            raise RuntimeError("CalDAV client not initialized")
+            return "Error: CalDAV client not initialized"
 
         try:
             calendar = caldav.Calendar(client=self._client, url=list_url)
@@ -154,7 +154,7 @@ class CalDAVTools(ToolSetHandler):
             
         except Exception as e:
             logger.error(f"Error listing tasks: {e}", exc_info=True)
-            raise
+            return f"Error: {e}"
 
     @tool(
         description="Add a new task to a task list",
@@ -194,7 +194,7 @@ class CalDAVTools(ToolSetHandler):
         description: Optional[str] = None,
         priority: Optional[int] = None,
         due_date: Optional[str] = None
-    ) -> Dict[str, str]:
+    ) -> Union[str, Dict[str, str]]:
         """Add a new task to a task list
         
         Args:
@@ -208,7 +208,7 @@ class CalDAVTools(ToolSetHandler):
             Dictionary with created task information
         """
         if not self._client:
-            raise RuntimeError("CalDAV client not initialized")
+            return "Error: CalDAV client not initialized"
 
         try:
             calendar = caldav.Calendar(client=self._client, url=list_url)
@@ -256,7 +256,7 @@ class CalDAVTools(ToolSetHandler):
             
         except Exception as e:
             logger.error(f"Error adding task: {e}", exc_info=True)
-            raise
+            return f"Error: {e}"
 
     @tool(
         description="Mark a task as complete",
@@ -275,7 +275,7 @@ class CalDAVTools(ToolSetHandler):
             "required": ["list_url", "task_uid"]
         }
     )
-    async def complete_task(self, list_url: str, task_uid: str) -> Dict[str, str]:
+    async def complete_task(self, list_url: str, task_uid: str) -> Union[str, Dict[str, str]]:
         """Mark a task as complete
         
         Args:
@@ -286,7 +286,7 @@ class CalDAVTools(ToolSetHandler):
             Dictionary with completion status
         """
         if not self._client:
-            raise RuntimeError("CalDAV client not initialized")
+            return "Error: CalDAV client not initialized"
 
         try:
             calendar = caldav.Calendar(client=self._client, url=list_url)
@@ -309,7 +309,7 @@ class CalDAVTools(ToolSetHandler):
                     continue
             
             if not target_todo:
-                raise ValueError(f"Task with UID {task_uid} not found in list")
+                return {"status": "error", "message": f"Task with UID {task_uid} not found in list"}
             
             # Update the task to completed
             ical = Calendar.from_ical(target_todo.data)
@@ -333,7 +333,7 @@ class CalDAVTools(ToolSetHandler):
             
         except Exception as e:
             logger.error(f"Error completing task: {e}", exc_info=True)
-            raise
+            return f"Error: {e}"
 
     def _parse_todo(self, todo) -> Optional[Dict[str, Any]]:
         """Parse a CalDAV todo into a dictionary
