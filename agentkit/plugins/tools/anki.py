@@ -1,7 +1,7 @@
 import base64
 import logging
 import uuid
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import aiohttp
 
@@ -30,7 +30,7 @@ class AnkiTool(ToolSetHandler):
             async with session.post(self.ANKI_CONNECT_URL, json=payload) as resp:
                 data = await resp.json()
                 if data.get("error"):
-                    raise Exception(f"AnkiConnect error: {data['error']}")
+                    return f"AnkiConnect error: {data['error']}"
                 return data.get("result")
 
     async def _generate_audio(self, text: str, language: str = "en") -> bytes:
@@ -62,25 +62,25 @@ class AnkiTool(ToolSetHandler):
             "properties": {}
         }
     )
-    async def list_cards(self) -> Dict[str, Any]:
-        try:
-            note_ids = await self._anki_request("findNotes", {"query": f"deck:{self.DECK_NAME}"})
-            if not note_ids:
-                return {"status": "success", "deck": self.DECK_NAME, "cards": []}
-            notes_info = await self._anki_request("notesInfo", {"notes": note_ids})
-            cards = [
-                {
-                    "note_id": note["noteId"],
-                    "front": note["fields"]["Front"]["value"],
-                    "back": note["fields"]["Back"]["value"],
-                    "tags": note.get("tags", []),
-                }
-                for note in notes_info
-            ]
-            return {"status": "success", "deck": self.DECK_NAME, "cards": cards}
-        except Exception as e:
-            logger.error(f"Error listing cards: {e}", exc_info=True)
-            return {"status": "error", "error": str(e)}
+    async def list_cards(self) -> Union[str, Dict[str, Any]]:
+        note_ids = await self._anki_request("findNotes", {"query": f"deck:{self.DECK_NAME}"})
+        if isinstance(note_ids, str):
+            return note_ids
+        if not note_ids:
+            return {"status": "success", "deck": self.DECK_NAME, "cards": []}
+        notes_info = await self._anki_request("notesInfo", {"notes": note_ids})
+        if isinstance(notes_info, str):
+            return notes_info
+        cards = [
+            {
+                "note_id": note["noteId"],
+                "front": note["fields"]["Front"]["value"],
+                "back": note["fields"]["Back"]["value"],
+                "tags": note.get("tags", []),
+            }
+            for note in notes_info
+        ]
+        return {"status": "success", "deck": self.DECK_NAME, "cards": cards}
 
     @tool(
         description=(
@@ -114,55 +114,59 @@ class AnkiTool(ToolSetHandler):
         english_sentence: str,
         german_sentence: str,
         notes: str = ""
-    ) -> Dict[str, Any]:
+    ) -> Union[str, Dict[str, Any]]:
         deck_name = self.DECK_NAME
+        result = await self._anki_request("createDeck", {"deck": deck_name})
+        if isinstance(result, str):
+            return result
+
+        card_id = uuid.uuid4().hex[:10]
+        en_filename = f"anki_en_{card_id}.wav"
+        de_filename = f"anki_de_{card_id}.wav"
+
         try:
-            # Ensure deck exists
-            await self._anki_request("createDeck", {"deck": deck_name})
-
-            card_id = uuid.uuid4().hex[:10]
-            en_filename = f"anki_en_{card_id}.wav"
-            de_filename = f"anki_de_{card_id}.wav"
-
-            # Generate and store audio for both sentences
             en_audio = await self._generate_audio(english_sentence, language="en")
-            de_audio = await self._generate_audio(german_sentence, language="de")
-
-            await self._store_audio(en_audio, en_filename)
-            await self._store_audio(de_audio, de_filename)
-
-            # Build card HTML
-            front = f"{english_sentence}<br><br>[sound:{en_filename}]"
-            back = f"{german_sentence}<br><br>[sound:{de_filename}]"
-            if notes:
-                back += f"<br><br><i>{notes}</i>"
-
-            note_id = await self._anki_request("addNote", {
-                "note": {
-                    "deckName": deck_name,
-                    "modelName": "Basic",
-                    "fields": {
-                        "Front": front,
-                        "Back": back
-                    },
-                    "options": {
-                        "allowDuplicate": False
-                    },
-                    "tags": ["language", "en-de"]
-                }
-            })
-
-            await self._anki_request("sync")
-
-            return {
-                "status": "success",
-                "note_id": note_id,
-                "deck": deck_name,
-                "english": english_sentence,
-                "german": german_sentence,
-                "has_notes": bool(notes)
-            }
-
         except Exception as e:
-            logger.error(f"Error adding Anki card: {e}", exc_info=True)
-            return {"status": "error", "error": str(e)}
+            return f"Error generating English audio: {e}"
+
+        try:
+            de_audio = await self._generate_audio(german_sentence, language="de")
+        except Exception as e:
+            return f"Error generating German audio: {e}"
+
+        await self._store_audio(en_audio, en_filename)
+        await self._store_audio(de_audio, de_filename)
+
+        front = f"{english_sentence}<br><br>[sound:{en_filename}]"
+        back = f"{german_sentence}<br><br>[sound:{de_filename}]"
+        if notes:
+            back += f"<br><br><i>{notes}</i>"
+
+        note_id = await self._anki_request("addNote", {
+            "note": {
+                "deckName": deck_name,
+                "modelName": "Basic",
+                "fields": {
+                    "Front": front,
+                    "Back": back
+                },
+                "options": {
+                    "allowDuplicate": False
+                },
+                "tags": ["language", "en-de"]
+            }
+        })
+
+        if isinstance(note_id, str):
+            return note_id
+
+        await self._anki_request("sync")
+
+        return {
+            "status": "success",
+            "note_id": note_id,
+            "deck": deck_name,
+            "english": english_sentence,
+            "german": german_sentence,
+            "has_notes": bool(notes)
+        }
