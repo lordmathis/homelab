@@ -5,7 +5,7 @@ class DefaultChatbot(ReActAgentPlugin):
     default = True
     name = "Default"
     provider_id = "llamactl"
-    model_id = "GLM-47-Flash"
+    model_id = "Qwen3-5-35B-A3B"
     tool_servers = ["time", "knowledge_base", "tasks", "skills"]
     max_iterations = 20
 
