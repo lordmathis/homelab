@@ -38,6 +38,9 @@ providers:
       conditions:
         - field: "id"
           contains: ":free"
+  google:
+    api_base: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key: "${GEMINI_API_KEY}"
 
 logging:
   target: "/app/logs/agentkit.log"
