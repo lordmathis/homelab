@@ -8,12 +8,6 @@ mcps:
     env:
       GITEA_HOST: "${GITEA_HOST}"
       GITEA_ACCESS_TOKEN: "${GITEA_ACCESS_TOKEN}"
-  time:
-    command: uvx
-    type: "stdio"
-    args:
-      - mcp-server-time
-      - --local-timezone=Europe/Bratislava
   openweathermap:
     command: "npx"
     type: "stdio"
