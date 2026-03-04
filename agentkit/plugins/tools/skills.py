@@ -132,7 +132,8 @@ class SkillsTool(ToolSetHandler):
         description=(
             "Update the markdown body of a skill's SKILL.md file. "
             "The YAML frontmatter (required_tool_servers etc.) is preserved unless explicitly overridden. "
-            "Use this after reviewing a conversation to improve a skill's prompt."
+            "Use this after reviewing a conversation to improve a skill's prompt. "
+            "If the skill doesn't exist, it will be created."
         ),
         parameters={
             "type": "object",
@@ -159,26 +160,36 @@ class SkillsTool(ToolSetHandler):
         body: str,
         frontmatter: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        skill_md = self._resolve_skill_path(skill_name)
-        if skill_md is None:
-            return {"status": "error", "error": f"Skill '{skill_name}' not found"}
+        if not self._skills_dir:
+            return {"status": "error", "error": f"Skills directory not configured"}
 
-        existing_content = skill_md.read_text(encoding="utf-8")
+        skill_name = Path(skill_name).name
+        skill_dir = self._skills_dir / skill_name
+        skill_md = skill_dir / "SKILL.md"
+
+        is_new = False
+        if not skill_md.exists():
+            is_new = True
+            skill_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created skill directory: {skill_dir}")
+
+        existing_content = skill_md.read_text(encoding="utf-8") if skill_md.exists() else ""
         existing_frontmatter, _ = _parse_skill_file(existing_content)
 
-        merged_frontmatter = existing_frontmatter.copy()
+        merged_frontmatter = (existing_frontmatter or {}).copy()
         if frontmatter:
             merged_frontmatter.update(frontmatter)
 
         new_content = _serialize_skill_file(merged_frontmatter, body)
         skill_md.write_text(new_content, encoding="utf-8")
 
-        logger.info(f"Updated skill '{skill_name}' at {skill_md}")
+        action = "Created" if is_new else "Updated"
+        logger.info(f"{action} skill '{skill_name}' at {skill_md}")
         return {
             "status": "success",
             "skill_name": skill_name,
             "path": str(skill_md),
-            "message": f"Skill '{skill_name}' updated successfully"
+            "message": f"Skill '{skill_name}' {action.lower()} successfully"
         }
 
     def _resolve_skill_path(self, skill_name: str) -> Optional[Path]:
