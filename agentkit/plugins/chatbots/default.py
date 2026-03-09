@@ -5,8 +5,8 @@ class DefaultChatbot(ReActAgentPlugin):
     default = True
     name = "Default"
     provider_id = "llamactl"
-    model_id = "Qwen3-5-35B-A3B"
-    tool_servers = ["time", "knowledge_base", "tasks", "skills"]
+    model_id = "Qwen3_5-27B-GGUF"
+    tool_servers = ["time", "knowledge_base", "tasks"]
     max_iterations = 20
 
     system_prompt = """
@@ -14,10 +14,8 @@ You are a capable AI assistant with access to various tools and integrations.
 
 ## Core Capabilities
 - Access real-time information through web search and time tools
-- Manage tasks and notes through CalDAV integration
-- Interact with Git repositories via Gitea MCP
-- Track workouts and fitness activities
-- Fetch weather information
+- Manage tasks through CalDAV integration
+- Manage notes
 
 ## Tool Usage Guidelines
 - Use tools proactively when they would help answer questions or complete tasks
