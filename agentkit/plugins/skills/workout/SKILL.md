@@ -6,72 +6,67 @@ required_tool_servers:
 # @workout - Workout Logging Skill
 
 ## Purpose
-This skill enables logging and tracking of workouts, including workout templates. When the user mentions exercises, sets, reps, or workout-related activities, treat it as workout logging.
+Log and track workouts using a template-driven flow. Templates define which exercises to do; the agent guides the user through them in order.
 
-## CRITICAL: Always Call the Tools
-NEVER pretend you logged something. When the user reports an exercise, you MUST call `workout__log_exercise` before responding. Do not generate a summary of what was logged without actually calling the tool. If you are unsure about any details (weight, reps), ask the user first, but ALWAYS call the tool to persist the data.
+## Tools
+- `workout__start_workout` — Start session: selects next template (round-robin), loads last session for reference
+- `workout__log_set` — Log a set; exercise name is fuzzy-matched against the current template
+- `workout__get_progress` — Show what's done and what's next
+- `workout__end_workout` — End session and show summary
+- `workout__create_template` — Create a new workout template
+- `workout__list_templates` — List templates with exercises and order
 
-## Available Tools
-- `workout__search_exercises` - Search the exercise registry by name or category
-- `workout__create_exercise` - Register a new exercise (name + optional category)
-- `workout__start_workout` - Start a new workout session
-- `workout__log_exercise` - Log sets for an exercise (requires exercise_id)
-- `workout__infer_template` - Infer which template is being followed
-- `workout__get_template_progress` - Check progress against a template
-- `workout__get_exercise_history` - View past performance for an exercise
-- `workout__get_workout_summary` - Summarize a workout
-- `workout__get_history` - List recent workouts
-- `workout__end_workout` - End the current session
-- `workout__create_template` - Create a workout template
-- `workout__list_templates` - List available templates
+## Normal Workout Flow
 
-## Core Workflow
+### 1. Starting a workout
+Call `workout__start_workout`. The response contains:
+- `template`: which template was selected and its exercises with targets
+- `last_session`: what the user did last time they ran this same template (or null if first time)
 
-### Exercise Resolution (always do this first)
-When the user mentions an exercise:
-1. Call `workout__search_exercises` with the exercise name to find it in the registry
-2. If found, use the returned `id` for all subsequent calls
-3. If not found, call `workout__create_exercise` to register it, then use the new `id`
+**Always show the user:**
+- Which template was selected ("You're doing Push A today")
+- What they did last time for each exercise (weight and reps), so they have a reference
 
-### Logging a Workout
-1. If no active workout, call `workout__start_workout`
-2. Resolve the exercise ID (see above)
-3. Call `workout__log_exercise` with the `exercise_id` and `sets_data`
-   - Sets can be logged all at once or one at a time (set numbers auto-increment)
-   - Use `include_guidance: true` to get template progress and last performance
-4. Call `workout__infer_template` to determine which template the user is following
-5. Show progress: sets remaining, next exercise, comparison to last performance
+### 2. Logging sets
+When the user reports a set or sets, you must identify which template exercise they mean and call `workout__log_set` with its `exercise_id`.
 
-### Example Flow
-User says: "Bench press 3x8 at 80kg"
+**Exercise matching is your responsibility.** The template returned by `start_workout` contains each exercise's `name` and `exercise_id`. When the user mentions an exercise informally, map it to the closest template exercise by meaning — don't require an exact name match.
 
-1. `workout__search_exercises(query="bench press")` -> finds exercise with id `abc-123`
-2. `workout__log_exercise(exercise_id="abc-123", sets_data=[{reps: 8, weight: 80}, {reps: 8, weight: 80}, {reps: 8, weight: 80}], include_guidance=true)`
-3. Report results and guidance to user
+Examples:
+- User says "squats" → template has "Machine Hack Squats" → use that `exercise_id`
+- User says "chest press" → template has "Incline Dumbbell Press" → use that `exercise_id`
+- User says "pull-ups" → template has "Assisted Pull-Up Machine" → use that `exercise_id`
 
-### Set-by-Set Logging
-User says: "Bench press 8 reps at 80kg" (then later "another set, 7 reps")
+If the user's description is genuinely ambiguous (e.g. two similar exercises in the template), ask them to clarify before calling the tool.
 
-Each call to `workout__log_exercise` auto-increments the set number, so calling it multiple times for the same exercise in the same workout works correctly.
+Call `workout__log_set` with:
+- `exercise_id`: the matched exercise's ID from the template
+- `sets`: array of `{reps, weight}` objects
 
-## Behavior
+After each logged set, the response includes `progress` — show the user how many sets remain for the current exercise and what's next.
 
-1. **Always call the tools first**, then respond based on the tool results
-2. **Summarize what was logged** clearly (exercise, sets, reps, weight if mentioned)
-3. **Provide guidance** when possible:
-   - Show last performance for the exercise (reps/weight)
-   - Show how many sets remain for the current exercise
-   - Show which exercises are left in the template and the next exercise
-4. **Ask relevant follow-up questions** if details are missing:
-   - How did it feel?
-   - What weight did you use?
-   - Any notes about form or difficulty?
+### 3. Ending a workout
+When the user says they're done (or all exercises are complete), call `workout__end_workout`. Show the full summary.
 
-## Exercise Categories
-When creating exercises, assign a category: back, chest, legs, shoulders, arms, core, cardio, or other appropriate category. This helps with organization and search.
+## Example Interactions
 
-## Tone
-- Encouraging and supportive
-- Casual but respectful
-- Focus on progress and consistency
-- Never judgmental about performance
+**User:** "Starting my workout"
+→ Call `start_workout`, then say: "You're on **Legs** today. Last time (March 2nd): Machine Hack Squats 4×10 @ 80kg, Leg Press 3×12 @ 120kg... Let's go 💪"
+
+**User:** "Did squats, 10 reps at 82.5kg"
+→ Template has "Machine Hack Squats" with id `abc-123` → Call `log_set(exercise_id="abc-123", sets=[{reps: 10, weight: 82.5}])`
+→ "Machine Hack Squats — set 1 done. 3 sets remaining. Up next: Leg Press (target 3×10-12)."
+
+**User:** "3 more sets same weight, 10, 9, 9 reps"
+→ Same exercise, same id → Call `log_set(exercise_id="abc-123", sets=[{reps:10,weight:82.5},{reps:9,weight:82.5},{reps:9,weight:82.5}])`
+→ "Machine Hack Squats done ✓. Next: Leg Press."
+
+**User:** "Done for today"
+→ Call `end_workout`, show summary.
+
+## Key Rules
+- **Resolve exercise names yourself** using the template from `start_workout`. Never ask the user to give you an exact name or an ID.
+- **Always show last session data** at the start of a workout — this is the user's primary reference.
+- **Show progress after every set** — sets remaining for current exercise and what's next.
+- After all template exercises are complete, prompt the user to end the workout.
+- Keep responses brief and encouraging. No need to repeat the full exercise list every turn.

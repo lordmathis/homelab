@@ -1,5 +1,5 @@
 """
-Workout Toolset Plugin - Self-contained workout logging and tracking
+Workout Toolset Plugin - Simplified workout logging with template-driven flow
 """
 
 import logging
@@ -15,32 +15,26 @@ logger = logging.getLogger(__name__)
 
 
 class WorkoutToolset(ToolSetHandler):
-    """Standalone workout logging toolset plugin"""
+    """Template-driven workout logging toolset"""
 
     def __init__(self):
         super().__init__("workout")
         self.db_path: Optional[str] = None
         self.current_workout_id: Optional[str] = None
+        self.current_template_id: Optional[str] = None
 
     async def initialize(self) -> None:
-        """Initialize the toolset and database"""
         await super().initialize()
-
-        # Get persistent storage directory
         workspace = self._tool_manager.get_persistent_storage(self.server_name)
         self.db_path = os.path.join(workspace, "workouts.db")
-
-        # Initialize database schema
         self._init_db()
         logger.info(f"Workout database initialized at {self.db_path}")
 
     def _init_db(self) -> None:
-        """Create database tables if they don't exist"""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
 
-        # Create exercises registry table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS exercises (
                 id TEXT PRIMARY KEY,
@@ -50,21 +44,43 @@ class WorkoutToolset(ToolSetHandler):
                 created_at TEXT NOT NULL
             )
         """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_exercise_name ON exercises(name)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_exercise_category ON exercises(category)")
 
-        # Create workouts table
         conn.execute("""
-            CREATE TABLE IF NOT EXISTS workouts (
+            CREATE TABLE IF NOT EXISTS templates (
                 id TEXT PRIMARY KEY,
-                date TEXT NOT NULL,
-                notes TEXT,
+                name TEXT NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1,
+                last_used_at TEXT,
                 created_at TEXT NOT NULL
             )
         """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_workout_date ON workouts(date)")
 
-        # Create workout_sets table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS template_exercises (
+                id TEXT PRIMARY KEY,
+                template_id TEXT NOT NULL,
+                exercise_id TEXT NOT NULL,
+                order_index INTEGER NOT NULL,
+                target_sets INTEGER NOT NULL DEFAULT 3,
+                target_reps_min INTEGER,
+                target_reps_max INTEGER,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE,
+                FOREIGN KEY (exercise_id) REFERENCES exercises(id)
+            )
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS workouts (
+                id TEXT PRIMARY KEY,
+                template_id TEXT,
+                date TEXT NOT NULL,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (template_id) REFERENCES templates(id)
+            )
+        """)
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS workout_sets (
                 id TEXT PRIMARY KEY,
@@ -79,115 +95,35 @@ class WorkoutToolset(ToolSetHandler):
                 FOREIGN KEY (exercise_id) REFERENCES exercises(id)
             )
         """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_set_workout ON workout_sets(workout_id)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_set_exercise ON workout_sets(exercise_id)")
-
-        # Create templates table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS templates (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                active INTEGER NOT NULL DEFAULT 1,
-                created_at TEXT NOT NULL
-            )
-        """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_templates_active ON templates(active)")
-
-        # Create template_exercises table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS template_exercises (
-                id TEXT PRIMARY KEY,
-                template_id TEXT NOT NULL,
-                exercise_id TEXT NOT NULL,
-                order_index INTEGER NOT NULL,
-                target_sets INTEGER NOT NULL,
-                target_reps_min INTEGER,
-                target_reps_max INTEGER,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE,
-                FOREIGN KEY (exercise_id) REFERENCES exercises(id)
-            )
-        """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_template_exercises_template ON template_exercises(template_id)")
 
         conn.commit()
         conn.close()
 
     def _get_conn(self) -> sqlite3.Connection:
-        """Get a database connection"""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
 
-    def _normalize_name(self, name: str) -> str:
+    def _normalize(self, name: str) -> str:
         return " ".join(name.strip().lower().split())
 
-    def _find_or_create_exercise(self, name: str, category: Optional[str], conn: sqlite3.Connection) -> str:
-        """Find an exercise by normalized name or create it. Returns exercise ID."""
-        normalized = self._normalize_name(name)
-        row = conn.execute(
-            "SELECT id FROM exercises WHERE name = ?",
-            (normalized,)
-        ).fetchone()
-        if row:
-            return row["id"]
-
-        exercise_id = str(uuid.uuid4())
-        now = datetime.now(UTC).isoformat()
-        conn.execute(
-            "INSERT INTO exercises (id, name, display_name, category, created_at) VALUES (?, ?, ?, ?, ?)",
-            (exercise_id, normalized, name.strip(), category, now)
-        )
-        return exercise_id
-
-    def _get_logged_exercise_ids(self, workout_id: str, conn: sqlite3.Connection) -> List[str]:
-        rows = conn.execute(
-            "SELECT DISTINCT exercise_id FROM workout_sets WHERE workout_id = ?",
-            (workout_id,)
-        ).fetchall()
-        return [r["exercise_id"] for r in rows]
-
-    def _get_last_exercise_sets(self, exercise_id: str, exclude_workout_id: Optional[str], conn: sqlite3.Connection) -> Dict[str, Any]:
-        last_workout = conn.execute(
+    def _get_next_template(self, conn: sqlite3.Connection) -> Optional[sqlite3.Row]:
+        """Round-robin: return the active template that was least recently used."""
+        return conn.execute(
             """
-            SELECT w.id, w.date
-            FROM workouts w
-            JOIN workout_sets ws ON ws.workout_id = w.id
-            WHERE ws.exercise_id = ?
-              AND (? IS NULL OR w.id != ?)
-            ORDER BY w.date DESC
+            SELECT * FROM templates
+            WHERE active = 1
+            ORDER BY last_used_at ASC NULLS FIRST, created_at ASC
             LIMIT 1
-            """,
-            (exercise_id, exclude_workout_id, exclude_workout_id)
-        ).fetchone()
-
-        if not last_workout:
-            return {"workout_id": None, "date": None, "sets": []}
-
-        sets = conn.execute(
             """
-            SELECT set_number, reps, weight, notes
-            FROM workout_sets
-            WHERE workout_id = ? AND exercise_id = ?
-            ORDER BY set_number
-            """,
-            (last_workout["id"], exercise_id)
-        ).fetchall()
-
-        return {
-            "workout_id": last_workout["id"],
-            "date": last_workout["date"],
-            "sets": [
-                {"set": s["set_number"], "reps": s["reps"], "weight": s["weight"], "notes": s["notes"]}
-                for s in sets
-            ]
-        }
+        ).fetchone()
 
     def _get_template_exercises(self, template_id: str, conn: sqlite3.Connection) -> List[Dict[str, Any]]:
         rows = conn.execute(
             """
-            SELECT te.exercise_id, e.display_name, te.order_index, te.target_sets, te.target_reps_min, te.target_reps_max
+            SELECT te.exercise_id, e.display_name AS name, e.category,
+                   te.order_index, te.target_sets, te.target_reps_min, te.target_reps_max
             FROM template_exercises te
             JOIN exercises e ON e.id = te.exercise_id
             WHERE te.template_id = ?
@@ -195,229 +131,305 @@ class WorkoutToolset(ToolSetHandler):
             """,
             (template_id,)
         ).fetchall()
+        return [dict(r) for r in rows]
 
-        return [
-            {
-                "exercise_id": r["exercise_id"],
-                "name": r["display_name"],
-                "order": r["order_index"],
-                "target_sets": r["target_sets"],
-                "target_reps_min": r["target_reps_min"],
-                "target_reps_max": r["target_reps_max"]
-            }
-            for r in rows
-        ]
-
-    def _compute_template_progress(self, template_id: str, workout_id: str, conn: sqlite3.Connection) -> Dict[str, Any]:
-        template_exercises = self._get_template_exercises(template_id, conn)
-        if not template_exercises:
-            return {"completed": [], "remaining": [], "next": None}
-
-        sets_done_by_exercise = conn.execute(
+    def _get_last_session_for_template(self, template_id: str, conn: sqlite3.Connection) -> Optional[Dict[str, Any]]:
+        """Get the most recent completed workout for this template."""
+        workout = conn.execute(
             """
-            SELECT exercise_id, COUNT(id) AS sets_done
-            FROM workout_sets
-            WHERE workout_id = ?
+            SELECT id, date FROM workouts
+            WHERE template_id = ?
+            ORDER BY date DESC
+            LIMIT 1
+            """,
+            (template_id,)
+        ).fetchone()
+        if not workout:
+            return None
+
+        rows = conn.execute(
+            """
+            SELECT e.display_name AS exercise_name, ws.set_number, ws.reps, ws.weight
+            FROM workout_sets ws
+            JOIN exercises e ON e.id = ws.exercise_id
+            WHERE ws.workout_id = ?
+            ORDER BY ws.created_at, ws.set_number
+            """,
+            (workout["id"],)
+        ).fetchall()
+
+        # Group sets by exercise
+        exercises: Dict[str, Any] = {}
+        for r in rows:
+            n = r["exercise_name"]
+            if n not in exercises:
+                exercises[n] = []
+            exercises[n].append({"set": r["set_number"], "reps": r["reps"], "weight": r["weight"]})
+
+        return {
+            "date": workout["date"],
+            "exercises": [{"name": k, "sets": v} for k, v in exercises.items()]
+        }
+
+    def _get_workout_progress(self, workout_id: str, template_id: str, conn: sqlite3.Connection) -> Dict[str, Any]:
+        """Return per-exercise progress vs template targets."""
+        template_exercises = self._get_template_exercises(template_id, conn)
+
+        sets_done = conn.execute(
+            """
+            SELECT exercise_id, COUNT(*) AS count
+            FROM workout_sets WHERE workout_id = ?
             GROUP BY exercise_id
             """,
             (workout_id,)
         ).fetchall()
+        done_map = {r["exercise_id"]: r["count"] for r in sets_done}
 
-        sets_done_map = {r["exercise_id"]: r["sets_done"] for r in sets_done_by_exercise}
-
-        completed = []
-        remaining = []
+        result = []
         for ex in template_exercises:
-            sets_done = sets_done_map.get(ex["exercise_id"], 0)
-            sets_remaining = max(ex["target_sets"] - sets_done, 0)
-
-            entry = {
-                "exercise_id": ex["exercise_id"],
+            eid = ex["exercise_id"]
+            done = done_map.get(eid, 0)
+            remaining = max(ex["target_sets"] - done, 0)
+            result.append({
                 "name": ex["name"],
-                "order": ex["order"],
+                "exercise_id": eid,
                 "target_sets": ex["target_sets"],
+                "sets_done": done,
+                "sets_remaining": remaining,
                 "target_reps_min": ex["target_reps_min"],
                 "target_reps_max": ex["target_reps_max"],
-                "sets_done": sets_done,
-                "sets_remaining": sets_remaining
-            }
-
-            if sets_remaining == 0:
-                completed.append(entry)
-            else:
-                remaining.append(entry)
-
-        remaining_sorted = sorted(remaining, key=lambda x: x["order"])
-        next_exercise = remaining_sorted[0] if remaining_sorted else None
+                "done": remaining == 0
+            })
 
         return {
-            "completed": completed,
-            "remaining": remaining_sorted,
-            "next": next_exercise
+            "exercises": result,
+            "next": next((e for e in result if not e["done"]), None)
         }
 
     def _get_next_set_number(self, workout_id: str, exercise_id: str, conn: sqlite3.Connection) -> int:
         row = conn.execute(
-            "SELECT MAX(set_number) AS max_set FROM workout_sets WHERE workout_id = ? AND exercise_id = ?",
+            "SELECT MAX(set_number) AS m FROM workout_sets WHERE workout_id = ? AND exercise_id = ?",
             (workout_id, exercise_id)
         ).fetchone()
-        return (row["max_set"] or 0) + 1
+        return (row["m"] or 0) + 1
+
+    # -------------------------------------------------------------------------
+    # Tools
+    # -------------------------------------------------------------------------
 
     @tool(
-        description="Search the exercise registry by name or category",
+        description=(
+            "Start a new workout session. Automatically selects the next template via round-robin "
+            "(least recently used active template), loads the last session for that template so the "
+            "agent can show the user what they did before, and returns template exercises with targets. "
+            "Call this at the beginning of every workout."
+        ),
         parameters={
             "type": "object",
             "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Search query to match against exercise names"
-                },
-                "category": {
-                    "type": "string",
-                    "description": "Filter by category (e.g. back, chest, legs, shoulders, arms, core)"
-                }
+                "notes": {"type": "string", "description": "Optional notes about the workout"}
             },
             "required": []
         }
     )
-    async def search_exercises(self, query: Optional[str] = None, category: Optional[str] = None) -> Dict[str, Any]:
-        """Search the exercise registry"""
+    async def start_workout(self, notes: Optional[str] = None) -> Dict[str, Any]:
         conn = self._get_conn()
 
-        conditions = []
-        params = []
-        if query:
-            conditions.append("name LIKE ?")
-            params.append(f"%{self._normalize_name(query)}%")
-        if category:
-            conditions.append("lower(category) = ?")
-            params.append(category.strip().lower())
-
-        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-        rows = conn.execute(
-            f"SELECT id, display_name, category FROM exercises {where} ORDER BY display_name",
-            params
-        ).fetchall()
-
-        conn.close()
-        return {
-            "status": "success",
-            "count": len(rows),
-            "exercises": [
-                {"id": r["id"], "name": r["display_name"], "category": r["category"]}
-                for r in rows
-            ]
-        }
-
-    @tool(
-        description="Register a new exercise in the exercise registry",
-        parameters={
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "Exercise name"
-                },
-                "category": {
-                    "type": "string",
-                    "description": "Category (e.g. back, chest, legs, shoulders, arms, core)"
-                }
-            },
-            "required": ["name"]
-        }
-    )
-    async def create_exercise(self, name: str, category: Optional[str] = None) -> Dict[str, Any]:
-        """Register a new exercise"""
-        normalized = self._normalize_name(name)
-        if not normalized:
-            return {"status": "error", "message": "Exercise name cannot be empty"}
-
-        conn = self._get_conn()
-
-        existing = conn.execute(
-            "SELECT id, display_name, category FROM exercises WHERE name = ?",
-            (normalized,)
-        ).fetchone()
-        if existing:
+        template = self._get_next_template(conn)
+        if not template:
             conn.close()
-            return {
-                "status": "already_exists",
-                "id": existing["id"],
-                "name": existing["display_name"],
-                "category": existing["category"]
-            }
+            return {"status": "error", "message": "No active templates found. Create a template first with create_template."}
 
-        exercise_id = str(uuid.uuid4())
-        now = datetime.now(UTC).isoformat()
-        conn.execute(
-            "INSERT INTO exercises (id, name, display_name, category, created_at) VALUES (?, ?, ?, ?, ?)",
-            (exercise_id, normalized, name.strip(), category, now)
-        )
-        conn.commit()
-        conn.close()
-
-        return {
-            "status": "success",
-            "id": exercise_id,
-            "name": name.strip(),
-            "category": category
-        }
-
-    @tool(
-        description="Start a new workout session",
-        parameters={
-            "type": "object",
-            "properties": {
-                "notes": {
-                    "type": "string",
-                    "description": "Optional notes about the workout"
-                }
-            },
-            "required": []
-        }
-    )
-    async def start_workout(self, notes: Optional[str] = None) -> Dict[str, str]:
-        """Start a new workout session"""
         self.current_workout_id = str(uuid.uuid4())
+        self.current_template_id = template["id"]
         now = datetime.now(UTC).isoformat()
 
-        conn = self._get_conn()
         conn.execute(
-            "INSERT INTO workouts (id, date, notes, created_at) VALUES (?, ?, ?, ?)",
-            (self.current_workout_id, now, notes, now)
+            "INSERT INTO workouts (id, template_id, date, notes, created_at) VALUES (?, ?, ?, ?, ?)",
+            (self.current_workout_id, template["id"], now, notes, now)
+        )
+        conn.execute(
+            "UPDATE templates SET last_used_at = ? WHERE id = ?",
+            (now, template["id"])
         )
         conn.commit()
+
+        exercises = self._get_template_exercises(template["id"], conn)
+        last_session = self._get_last_session_for_template(template["id"], conn)
         conn.close()
 
         return {
             "status": "success",
             "workout_id": self.current_workout_id,
-            "message": "Started new workout session"
+            "template": {
+                "id": template["id"],
+                "name": template["name"],
+                "exercises": exercises
+            },
+            "last_session": last_session  # None if first time doing this template
         }
 
     @tool(
-        description="Create a workout template with exercises and target rep ranges",
+        description=(
+            "Log a set (or multiple sets) for an exercise. "
+            "Use the exercise_id from the template returned by start_workout. "
+            "Returns updated workout progress so you can tell the user what's next."
+        ),
         parameters={
             "type": "object",
             "properties": {
-                "name": {
+                "exercise_id": {
                     "type": "string",
-                    "description": "Template name"
+                    "description": "Exercise ID from the current template (returned by start_workout)"
                 },
-                "exercises": {
+                "sets": {
                     "type": "array",
-                    "description": "Exercises in order with targets",
+                    "description": "One or more sets to log",
                     "items": {
                         "type": "object",
                         "properties": {
-                            "name": {"type": "string", "description": "Exercise name (will be registered if new)"},
-                            "category": {"type": "string", "description": "Exercise category"},
-                            "order": {"type": "integer"},
-                            "target_sets": {"type": "integer"},
-                            "target_reps_min": {"type": "integer"},
-                            "target_reps_max": {"type": "integer"}
+                            "reps": {"type": "integer", "description": "Number of reps"},
+                            "weight": {"type": "number", "description": "Weight in kg (optional)"},
+                            "notes": {"type": "string", "description": "Optional notes for this set"}
                         },
-                        "required": ["name"]
+                        "required": ["reps"]
+                    }
+                }
+            },
+            "required": ["exercise_id", "sets"]
+        }
+    )
+    async def log_set(self, exercise_id: str, sets: List[Dict[str, Any]]) -> Dict[str, Any]:
+        if not self.current_workout_id:
+            return {"status": "error", "message": "No active workout. Call start_workout first."}
+
+        conn = self._get_conn()
+
+        exercise = conn.execute(
+            "SELECT display_name FROM exercises WHERE id = ?", (exercise_id,)
+        ).fetchone()
+        if not exercise:
+            conn.close()
+            return {"status": "error", "message": f"Exercise ID '{exercise_id}' not found. Use an ID from the current template."}
+
+        start_set = self._get_next_set_number(self.current_workout_id, exercise_id, conn)
+        now = datetime.now(UTC).isoformat()
+
+        for idx, s in enumerate(sets):
+            reps = s.get("reps")
+            if not isinstance(reps, int) or reps <= 0:
+                conn.close()
+                return {"status": "error", "message": f"Invalid reps value: {reps}"}
+            conn.execute(
+                "INSERT INTO workout_sets (id, workout_id, exercise_id, set_number, reps, weight, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (str(uuid.uuid4()), self.current_workout_id, exercise_id, start_set + idx,
+                 reps, s.get("weight"), s.get("notes"), now)
+            )
+
+        conn.commit()
+        progress = self._get_workout_progress(self.current_workout_id, self.current_template_id, conn)
+        conn.close()
+
+        return {
+            "status": "success",
+            "logged": {
+                "exercise": exercise["display_name"],
+                "sets_logged": len(sets),
+                "sets": sets
+            },
+            "progress": progress
+        }
+
+    @tool(
+        description="Get current workout progress: sets done vs targets for each exercise, and what's next.",
+        parameters={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    )
+    async def get_progress(self) -> Dict[str, Any]:
+        if not self.current_workout_id:
+            return {"status": "error", "message": "No active workout."}
+
+        conn = self._get_conn()
+        progress = self._get_workout_progress(self.current_workout_id, self.current_template_id, conn)
+        conn.close()
+        return {"status": "success", "progress": progress}
+
+    @tool(
+        description="End the current workout session and return a full summary.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "notes": {"type": "string", "description": "Optional final notes"}
+            },
+            "required": []
+        }
+    )
+    async def end_workout(self, notes: Optional[str] = None) -> Dict[str, Any]:
+        if not self.current_workout_id:
+            return {"status": "error", "message": "No active workout session."}
+
+        conn = self._get_conn()
+
+        if notes:
+            conn.execute("UPDATE workouts SET notes = ? WHERE id = ?", (notes, self.current_workout_id))
+
+        # Build summary
+        rows = conn.execute(
+            """
+            SELECT e.display_name AS exercise_name, ws.set_number, ws.reps, ws.weight, ws.notes
+            FROM workout_sets ws
+            JOIN exercises e ON e.id = ws.exercise_id
+            WHERE ws.workout_id = ?
+            ORDER BY ws.created_at, ws.set_number
+            """,
+            (self.current_workout_id,)
+        ).fetchall()
+
+        exercises: Dict[str, Any] = {}
+        for r in rows:
+            n = r["exercise_name"]
+            if n not in exercises:
+                exercises[n] = []
+            exercises[n].append({"set": r["set_number"], "reps": r["reps"], "weight": r["weight"]})
+
+        conn.commit()
+        conn.close()
+
+        summary = {
+            "workout_id": self.current_workout_id,
+            "exercises": [{"name": k, "sets": v} for k, v in exercises.items()]
+        }
+
+        self.current_workout_id = None
+        self.current_template_id = None
+
+        return {"status": "success", "summary": summary}
+
+    @tool(
+        description=(
+            "Create a new workout template. Each exercise will be registered in the exercise registry "
+            "if it doesn't exist yet."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Template name (e.g. 'Push A', 'Legs')"},
+                "exercises": {
+                    "type": "array",
+                    "description": "Exercises in order",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string", "description": "Exercise name"},
+                            "category": {"type": "string", "description": "Category (chest, legs, back, etc.)"},
+                            "target_sets": {"type": "integer", "description": "Target number of sets"},
+                            "target_reps_min": {"type": "integer", "description": "Minimum target reps"},
+                            "target_reps_max": {"type": "integer", "description": "Maximum target reps"}
+                        },
+                        "required": ["name", "target_sets"]
                     }
                 }
             },
@@ -425,32 +437,35 @@ class WorkoutToolset(ToolSetHandler):
         }
     )
     async def create_template(self, name: str, exercises: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Create a workout template"""
         if not exercises:
-            return {"status": "error", "message": "Template exercises cannot be empty"}
+            return {"status": "error", "message": "Template must include at least one exercise."}
 
         template_id = str(uuid.uuid4())
         now = datetime.now(UTC).isoformat()
 
         conn = self._get_conn()
         conn.execute(
-            "INSERT INTO templates (id, name, active, created_at) VALUES (?, ?, ?, ?)",
-            (template_id, name, 1, now)
+            "INSERT INTO templates (id, name, active, created_at) VALUES (?, ?, 1, ?)",
+            (template_id, name, now)
         )
 
         registered = []
-        for idx, exercise in enumerate(exercises, 1):
-            ex_name = exercise.get("name")
+        for idx, ex in enumerate(exercises, 1):
+            ex_name = ex.get("name", "").strip()
             if not ex_name:
-                return {"status": "error", "message": "Each template exercise must include a name"}
+                conn.close()
+                return {"status": "error", "message": "Each exercise must have a name."}
 
-            ex_category = exercise.get("category")
-            exercise_id = self._find_or_create_exercise(ex_name, ex_category, conn)
-
-            order_index = exercise.get("order", idx)
-            target_sets = exercise.get("target_sets", 3)
-            target_reps_min = exercise.get("target_reps_min")
-            target_reps_max = exercise.get("target_reps_max")
+            normalized = self._normalize(ex_name)
+            row = conn.execute("SELECT id FROM exercises WHERE name = ?", (normalized,)).fetchone()
+            if row:
+                exercise_id = row["id"]
+            else:
+                exercise_id = str(uuid.uuid4())
+                conn.execute(
+                    "INSERT INTO exercises (id, name, display_name, category, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (exercise_id, normalized, ex_name, ex.get("category"), now)
+                )
 
             conn.execute(
                 """
@@ -458,9 +473,10 @@ class WorkoutToolset(ToolSetHandler):
                     (id, template_id, exercise_id, order_index, target_sets, target_reps_min, target_reps_max, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (str(uuid.uuid4()), template_id, exercise_id, order_index, target_sets, target_reps_min, target_reps_max, now)
+                (str(uuid.uuid4()), template_id, exercise_id, idx,
+                 ex.get("target_sets", 3), ex.get("target_reps_min"), ex.get("target_reps_max"), now)
             )
-            registered.append({"name": ex_name, "exercise_id": exercise_id})
+            registered.append(ex_name)
 
         conn.commit()
         conn.close()
@@ -473,563 +489,97 @@ class WorkoutToolset(ToolSetHandler):
         }
 
     @tool(
-        description="List workout templates",
+        description="List all workout templates with their exercises and active status.",
         parameters={
             "type": "object",
             "properties": {
-                "include_exercises": {"type": "boolean", "description": "Include exercises list"},
-                "active_only": {"type": "boolean", "description": "Only active templates"}
+                "active_only": {"type": "boolean", "description": "Only show active templates (default true)"}
             },
             "required": []
         }
     )
-    async def list_templates(self, include_exercises: bool = False, active_only: bool = True) -> Dict[str, Any]:
-        """List workout templates"""
+    async def list_templates(self, active_only: bool = True) -> Dict[str, Any]:
         conn = self._get_conn()
-
-        if active_only:
-            templates = conn.execute(
-                "SELECT * FROM templates WHERE active = 1 ORDER BY created_at DESC"
-            ).fetchall()
-        else:
-            templates = conn.execute(
-                "SELECT * FROM templates ORDER BY created_at DESC"
-            ).fetchall()
+        where = "WHERE active = 1" if active_only else ""
+        templates = conn.execute(
+            f"SELECT * FROM templates {where} ORDER BY last_used_at ASC NULLS FIRST, created_at ASC"
+        ).fetchall()
 
         result = []
         for t in templates:
-            item = {
+            result.append({
                 "id": t["id"],
                 "name": t["name"],
                 "active": bool(t["active"]),
-                "created_at": t["created_at"]
-            }
-
-            if include_exercises:
-                item["exercises"] = self._get_template_exercises(t["id"], conn)
-
-            result.append(item)
+                "last_used_at": t["last_used_at"],
+                "exercises": self._get_template_exercises(t["id"], conn)
+            })
 
         conn.close()
-        return {
-            "status": "success",
-            "count": len(result),
-            "templates": result
-        }
+        return {"status": "success", "templates": result}
 
     @tool(
-        description="Update an existing workout template",
+        description=(
+            "Get recent workout history, optionally filtered by template. "
+            "Use this to look up past performance or answer questions like 'what did I do last week'."
+        ),
         parameters={
             "type": "object",
             "properties": {
-                "template_id": {"type": "string", "description": "Template ID to update"},
-                "name": {"type": "string", "description": "New template name"},
-                "active": {"type": "boolean", "description": "Set template active status"},
-                "exercises": {
-                    "type": "array",
-                    "description": "New exercises list (replaces existing)",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string", "description": "Exercise name (will be registered if new)"},
-                            "category": {"type": "string", "description": "Exercise category"},
-                            "order": {"type": "integer"},
-                            "target_sets": {"type": "integer"},
-                            "target_reps_min": {"type": "integer"},
-                            "target_reps_max": {"type": "integer"}
-                        },
-                        "required": ["name"]
-                    }
-                }
+                "limit": {"type": "integer", "description": "Number of recent workouts to return (default 5)"},
+                "template_id": {"type": "string", "description": "Filter by template ID (optional)"}
             },
-            "required": ["template_id"]
+            "required": []
         }
     )
-    async def update_template(self, template_id: str, name: Optional[str] = None,
-                              active: Optional[bool] = None,
-                              exercises: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
-        """Update an existing workout template"""
+    async def get_history(self, limit: int = 5, template_id: Optional[str] = None) -> Dict[str, Any]:
         conn = self._get_conn()
 
-        template = conn.execute(
-            "SELECT * FROM templates WHERE id = ?",
-            (template_id,)
-        ).fetchone()
-
-        if not template:
-            conn.close()
-            return {"status": "error", "message": f"Template {template_id} not found"}
-
-        if name is not None:
-            conn.execute("UPDATE templates SET name = ? WHERE id = ?", (name, template_id))
-
-        if active is not None:
-            conn.execute("UPDATE templates SET active = ? WHERE id = ?", (1 if active else 0, template_id))
-
-        if exercises is not None:
-            conn.execute("DELETE FROM template_exercises WHERE template_id = ?", (template_id,))
-
-            now = datetime.now(UTC).isoformat()
-            registered = []
-            for idx, exercise in enumerate(exercises, 1):
-                ex_name = exercise.get("name")
-                if not ex_name:
-                    conn.close()
-                    return {"status": "error", "message": "Each template exercise must include a name"}
-
-                ex_category = exercise.get("category")
-                exercise_id = self._find_or_create_exercise(ex_name, ex_category, conn)
-
-                order_index = exercise.get("order", idx)
-                target_sets = exercise.get("target_sets", 3)
-                target_reps_min = exercise.get("target_reps_min")
-                target_reps_max = exercise.get("target_reps_max")
-
-                conn.execute(
-                    """
-                    INSERT INTO template_exercises
-                        (id, template_id, exercise_id, order_index, target_sets, target_reps_min, target_reps_max, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (str(uuid.uuid4()), template_id, exercise_id, order_index, target_sets, target_reps_min, target_reps_max, now)
-                )
-                registered.append({"name": ex_name, "exercise_id": exercise_id})
-
-        conn.commit()
-        conn.close()
-
-        return {
-            "status": "success",
-            "template_id": template_id,
-            "message": "Template updated successfully"
-        }
-
-    @tool(
-        description="Infer the most likely workout template from an exercise",
-        parameters={
-            "type": "object",
-            "properties": {
-                "exercise_id": {"type": "string", "description": "Exercise ID"},
-                "workout_id": {"type": "string", "description": "Workout ID (uses current if not provided)"}
-            },
-            "required": ["exercise_id"]
-        }
-    )
-    async def infer_template(self, exercise_id: str, workout_id: Optional[str] = None) -> Dict[str, Any]:
-        """Infer the template based on exercise and current workout progress"""
-        target_workout_id = workout_id or self.current_workout_id
-
-        conn = self._get_conn()
-
-        candidates = conn.execute(
-            """
-            SELECT DISTINCT t.id, t.name
-            FROM templates t
-            JOIN template_exercises te ON te.template_id = t.id
-            WHERE t.active = 1 AND te.exercise_id = ?
-            """,
-            (exercise_id,)
-        ).fetchall()
-
-        if not candidates:
-            conn.close()
-            return {
-                "status": "not_found",
-                "message": "No active template contains this exercise"
-            }
-
-        if len(candidates) == 1:
-            chosen = candidates[0]
-            reason = "single_match"
-        else:
-            reason = "best_overlap"
-            if target_workout_id:
-                logged = set(self._get_logged_exercise_ids(target_workout_id, conn))
-            else:
-                logged = set()
-
-            best_score = -1
-            chosen = candidates[0]
-            for cand in candidates:
-                templ_ex = self._get_template_exercises(cand["id"], conn)
-                templ_ids = {e["exercise_id"] for e in templ_ex}
-                score = len(templ_ids.intersection(logged))
-                if score > best_score:
-                    best_score = score
-                    chosen = cand
-
-        progress = None
-        if target_workout_id:
-            progress = self._compute_template_progress(chosen["id"], target_workout_id, conn)
-
-        last_perf = self._get_last_exercise_sets(exercise_id, target_workout_id, conn)
-
-        conn.close()
-        return {
-            "status": "success",
-            "template": {
-                "id": chosen["id"],
-                "name": chosen["name"]
-            },
-            "reason": reason,
-            "progress": progress,
-            "last_performance": last_perf
-        }
-
-    @tool(
-        description="Get template progress for a workout",
-        parameters={
-            "type": "object",
-            "properties": {
-                "template_id": {"type": "string", "description": "Template ID"},
-                "workout_id": {"type": "string", "description": "Workout ID (uses current if not provided)"}
-            },
-            "required": ["template_id"]
-        }
-    )
-    async def get_template_progress(self, template_id: str, workout_id: Optional[str] = None) -> Dict[str, Any]:
-        """Get template progress for a workout"""
-        target_workout_id = workout_id or self.current_workout_id
-        if not target_workout_id:
-            return {"status": "error", "message": "No workout specified."}
-
-        conn = self._get_conn()
-        progress = self._compute_template_progress(template_id, target_workout_id, conn)
-        conn.close()
-
-        return {
-            "status": "success",
-            "workout_id": target_workout_id,
-            "template_id": template_id,
-            "progress": progress
-        }
-
-    @tool(
-        description="Get recent history for a specific exercise",
-        parameters={
-            "type": "object",
-            "properties": {
-                "exercise_id": {"type": "string", "description": "Exercise ID"},
-                "limit": {"type": "integer", "description": "Number of recent workouts to include"}
-            },
-            "required": ["exercise_id"]
-        }
-    )
-    async def get_exercise_history(self, exercise_id: str, limit: int = 3) -> Dict[str, Any]:
-        """Get recent history for a specific exercise"""
-        if limit <= 0:
-            return {"status": "error", "message": "Limit must be greater than 0"}
-
-        conn = self._get_conn()
-
-        exercise = conn.execute(
-            "SELECT display_name FROM exercises WHERE id = ?",
-            (exercise_id,)
-        ).fetchone()
-        if not exercise:
-            conn.close()
-            return {"status": "error", "message": f"Exercise {exercise_id} not found"}
+        where = "WHERE w.template_id = ?" if template_id else ""
+        params = [template_id] if template_id else []
+        params.append(limit)
 
         workouts = conn.execute(
-            """
-            SELECT DISTINCT w.id, w.date
+            f"""
+            SELECT w.id, w.date, w.notes, t.name AS template_name
             FROM workouts w
-            JOIN workout_sets ws ON ws.workout_id = w.id
-            WHERE ws.exercise_id = ?
+            LEFT JOIN templates t ON t.id = w.template_id
+            {where}
             ORDER BY w.date DESC
             LIMIT ?
             """,
-            (exercise_id, limit)
+            params
         ).fetchall()
 
-        history = []
+        result = []
         for w in workouts:
-            sets = conn.execute(
+            rows = conn.execute(
                 """
-                SELECT set_number, reps, weight, notes
-                FROM workout_sets
-                WHERE workout_id = ? AND exercise_id = ?
-                ORDER BY set_number
+                SELECT e.display_name AS exercise_name, ws.set_number, ws.reps, ws.weight
+                FROM workout_sets ws
+                JOIN exercises e ON e.id = ws.exercise_id
+                WHERE ws.workout_id = ?
+                ORDER BY ws.created_at, ws.set_number
                 """,
-                (w["id"], exercise_id)
+                (w["id"],)
             ).fetchall()
 
-            history.append({
-                "workout_id": w["id"],
+            exercises: Dict[str, Any] = {}
+            for r in rows:
+                n = r["exercise_name"]
+                if n not in exercises:
+                    exercises[n] = []
+                exercises[n].append({"set": r["set_number"], "reps": r["reps"], "weight": r["weight"]})
+
+            result.append({
                 "date": w["date"],
-                "sets": [
-                    {"set": s["set_number"], "reps": s["reps"], "weight": s["weight"], "notes": s["notes"]}
-                    for s in sets
-                ]
+                "template": w["template_name"],
+                "notes": w["notes"],
+                "exercises": [{"name": k, "sets": v} for k, v in exercises.items()]
             })
 
         conn.close()
-        return {
-            "status": "success",
-            "exercise_id": exercise_id,
-            "exercise_name": exercise["display_name"],
-            "count": len(history),
-            "history": history
-        }
-
-    @tool(
-        description="Log an exercise with sets, reps, and optional weight",
-        parameters={
-            "type": "object",
-            "properties": {
-                "exercise_id": {
-                    "type": "string",
-                    "description": "Exercise ID from the exercise registry"
-                },
-                "sets_data": {
-                    "type": "array",
-                    "description": "Array of sets with reps and optional weight",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "reps": {"type": "integer"},
-                            "weight": {"type": "number"},
-                            "notes": {"type": "string"}
-                        },
-                        "required": ["reps"]
-                    }
-                },
-                "workout_id": {
-                    "type": "string",
-                    "description": "Workout ID (uses current if not provided)"
-                },
-                "template_id": {
-                    "type": "string",
-                    "description": "Template ID (optional, used for guidance)"
-                },
-                "include_guidance": {
-                    "type": "boolean",
-                    "description": "Include template progress and last performance guidance"
-                }
-            },
-            "required": ["exercise_id", "sets_data"]
-        }
-    )
-    async def log_exercise(self, exercise_id: str, sets_data: List[Dict[str, Any]],
-                          workout_id: Optional[str] = None, template_id: Optional[str] = None,
-                          include_guidance: bool = False) -> Dict[str, Any]:
-        """Log an exercise with multiple sets"""
-        target_workout_id = workout_id or self.current_workout_id
-        if not target_workout_id:
-            return {"status": "error", "message": "No active workout. Start a workout first with start_workout."}
-
-        conn = self._get_conn()
-
-        # Verify exercise exists
-        exercise = conn.execute(
-            "SELECT display_name FROM exercises WHERE id = ?",
-            (exercise_id,)
-        ).fetchone()
-        if not exercise:
-            conn.close()
-            return {"status": "error", "message": f"Exercise {exercise_id} not found. Use search_exercises or create_exercise first."}
-
-        # Get next set number for incremental logging
-        start_set = self._get_next_set_number(target_workout_id, exercise_id, conn)
-
-        for idx, set_data in enumerate(sets_data):
-            reps = set_data.get("reps")
-            weight = set_data.get("weight")
-            notes = set_data.get("notes")
-
-            if not isinstance(reps, int) or reps <= 0:
-                return {"status": "error", "message": f"Invalid reps: {reps}"}
-
-            set_id = str(uuid.uuid4())
-            now = datetime.now(UTC).isoformat()
-            conn.execute(
-                "INSERT INTO workout_sets (id, workout_id, exercise_id, set_number, reps, weight, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (set_id, target_workout_id, exercise_id, start_set + idx, reps, weight, notes, now)
-            )
-
-        conn.commit()
-
-        exercise_name = exercise["display_name"]
-        response = {
-            "status": "success",
-            "exercise_id": exercise_id,
-            "exercise_name": exercise_name,
-            "sets_logged": len(sets_data),
-            "message": f"Logged {exercise_name} - {len(sets_data)} set(s)"
-        }
-
-        if include_guidance:
-            inferred = None
-            progress = None
-            if template_id:
-                progress = self._compute_template_progress(template_id, target_workout_id, conn)
-            else:
-                conn.close()
-                inferred = await self.infer_template(exercise_id, target_workout_id)
-                conn = self._get_conn()
-                if inferred.get("status") == "success":
-                    template_id = inferred["template"]["id"]
-                    progress = inferred.get("progress")
-
-            last_perf = self._get_last_exercise_sets(exercise_id, target_workout_id, conn)
-            response["guidance"] = {
-                "template_inference": inferred,
-                "template_id": template_id,
-                "progress": progress,
-                "last_performance": last_perf
-            }
-
-        conn.close()
-        return response
-
-    @tool(
-        description="Get summary of a workout",
-        parameters={
-            "type": "object",
-            "properties": {
-                "workout_id": {
-                    "type": "string",
-                    "description": "Workout ID (uses current if not provided)"
-                }
-            },
-            "required": []
-        }
-    )
-    async def get_workout_summary(self, workout_id: Optional[str] = None) -> Dict[str, Any]:
-        """Get a summary of a workout"""
-        target_workout_id = workout_id or self.current_workout_id
-        if not target_workout_id:
-            return {"status": "error", "message": "No workout specified."}
-
-        conn = self._get_conn()
-        summary = self._get_workout_summary_sync(target_workout_id, conn)
-        if not summary:
-            conn.close()
-            return {"status": "error", "message": f"Workout {target_workout_id} not found"}
-
-        conn.close()
-        return summary
-
-    def _get_workout_summary_sync(self, workout_id: str, conn: sqlite3.Connection) -> Dict[str, Any]:
-        """Synchronous version of get_workout_summary for internal use"""
-        workout = conn.execute(
-            "SELECT * FROM workouts WHERE id = ?",
-            (workout_id,)
-        ).fetchone()
-
-        if not workout:
-            return {}
-
-        # Get all sets grouped by exercise
-        rows = conn.execute(
-            """
-            SELECT e.id AS exercise_id, e.display_name, ws.set_number, ws.reps, ws.weight, ws.notes
-            FROM workout_sets ws
-            JOIN exercises e ON e.id = ws.exercise_id
-            WHERE ws.workout_id = ?
-            ORDER BY ws.created_at, ws.set_number
-            """,
-            (workout_id,)
-        ).fetchall()
-
-        # Group by exercise
-        exercises_map: Dict[str, Dict[str, Any]] = {}
-        for r in rows:
-            eid = r["exercise_id"]
-            if eid not in exercises_map:
-                exercises_map[eid] = {
-                    "exercise_id": eid,
-                    "name": r["display_name"],
-                    "sets": []
-                }
-            exercises_map[eid]["sets"].append({
-                "set": r["set_number"],
-                "reps": r["reps"],
-                "weight": r["weight"],
-                "notes": r["notes"]
-            })
-
-        return {
-            "id": workout["id"],
-            "date": workout["date"],
-            "notes": workout["notes"],
-            "exercises": list(exercises_map.values())
-        }
-
-    @tool(
-        description="Get recent workouts",
-        parameters={
-            "type": "object",
-            "properties": {
-                "limit": {
-                    "type": "integer",
-                    "description": "Number of workouts to retrieve"
-                }
-            },
-            "required": []
-        }
-    )
-    async def get_history(self, limit: int = 10) -> Dict[str, Any]:
-        """Get recent workouts"""
-        if limit <= 0:
-            return {"status": "error", "message": "Limit must be greater than 0"}
-
-        conn = self._get_conn()
-        workouts = conn.execute(
-            "SELECT id FROM workouts ORDER BY date DESC LIMIT ?",
-            (limit,)
-        ).fetchall()
-
-        result = {
-            "status": "success",
-            "count": len(workouts),
-            "workouts": []
-        }
-
-        for workout_row in workouts:
-            summary = self._get_workout_summary_sync(workout_row["id"], conn)
-            result["workouts"].append(summary)
-
-        conn.close()
-        return result
-
-    @tool(
-        description="End current workout session",
-        parameters={
-            "type": "object",
-            "properties": {
-                "final_notes": {
-                    "type": "string",
-                    "description": "Optional final notes"
-                }
-            },
-            "required": []
-        }
-    )
-    async def end_workout(self, final_notes: Optional[str] = None) -> Dict[str, Any]:
-        """End current workout session"""
-        if not self.current_workout_id:
-            return {"status": "error", "message": "No active workout session"}
-
-        conn = self._get_conn()
-        summary = self._get_workout_summary_sync(self.current_workout_id, conn)
-
-        if final_notes:
-            conn.execute(
-                "UPDATE workouts SET notes = ? WHERE id = ?",
-                (final_notes, self.current_workout_id)
-            )
-            conn.commit()
-
-        conn.close()
-        self.current_workout_id = None
-
-        return {
-            "status": "success",
-            "message": "Workout session ended",
-            "summary": summary
-        }
+        return {"status": "success", "count": len(result), "workouts": result}
 
     async def cleanup(self) -> None:
-        """Clean up resources"""
         pass
