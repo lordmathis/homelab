@@ -6,7 +6,7 @@ class DefaultChatbot(ReActAgentPlugin):
     name = "Default"
     provider_id = "llamactl"
     model_id = "Qwen3_5-27B-GGUF"
-    tool_servers = ["time", "knowledge_base", "tasks"]
+    tool_servers = ["time", "knowledge_base", "tasks", "geocode", "web_tools"]
     max_iterations = 20
 
     system_prompt = """

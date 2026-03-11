@@ -13,16 +13,18 @@ DEFAULT_BRANCH = "main"
 
 class GiteaNotes(ToolSetHandler):
 
-    def __init__(self, name: str = "gitea_notes"):
+    def __init__(self, name: str = "base_notes"):
         super().__init__(name)
 
-    def _format_tree(self, entries: List[Dict]) -> List[str]:
-        lines = []
+    def _format_tree(self, entries: List[Dict], excluded_folders: set = None) -> List[str]:
+        if excluded_folders:
+            entries = [e for e in entries if e.get("name") not in excluded_folders]
 
         dirs = [e for e in entries if e.get("type") == "dir"]
         files = [e for e in entries if e.get("type") == "file"]
         sorted_entries = dirs + files
 
+        lines = []
         for i, entry in enumerate(sorted_entries):
             is_last = (i == len(sorted_entries) - 1)
             connector = "└── " if is_last else "├── "
@@ -46,14 +48,22 @@ class GiteaNotes(ToolSetHandler):
                     "type": "string",
                     "description": "Optional subdirectory path to list",
                     "default": ""
+                },
+                "excluded_folders": {
+                    "type": "array",
+                    "description": "Optional list of folder names to exclude from the tree",
+                    "items": {"type": "string"},
+                    "default": []
                 }
             },
             "required": ["repo"]
         }
     )
-    async def list_notes(self, repo: str, path: str = "") -> str:
+    async def list_notes(self, repo: str, path: str = "", excluded_folders: list = None) -> str:
         try:
-            logger.debug(f"Listing notes for repo='{repo}' path='{path}'")
+            logger.debug(f"Listing notes for repo='{repo}' path='{path}' excluded={excluded_folders}")
+
+            excluded_set = set(excluded_folders) if excluded_folders else None
 
             result = await self.call_other_tool(
                 GITEA_SERVER,
@@ -70,7 +80,7 @@ class GiteaNotes(ToolSetHandler):
                 return f"No notes found in '{path or 'root'}'"
 
             tree_lines = [f"Notes in '{path or 'root'}':"]
-            tree_lines.extend(self._format_tree(result))
+            tree_lines.extend(self._format_tree(result, excluded_set))
 
             return "\n".join(tree_lines)
 
