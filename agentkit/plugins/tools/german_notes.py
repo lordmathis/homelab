@@ -4,7 +4,9 @@ from agentkit.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
 
-GERMAN_REPO = "German"
+NOTES_REPO = "Notes"
+NOTES_PATH = "🇩🇪 German"
+BASE_NOTES_TOOL = "base_notes"
 
 
 class GermanNotesTool(ToolSetHandler):
@@ -26,8 +28,9 @@ class GermanNotesTool(ToolSetHandler):
         }
     )
     async def list_notes(self, path: str = "") -> str:
+        full_path = f"{NOTES_PATH}/{path}".strip("/") if path else NOTES_PATH
         return await self.call_other_tool(
-            "gitea_notes", "list_notes", {"repo": GERMAN_REPO, "path": path}
+            BASE_NOTES_TOOL, "list_notes", {"repo": NOTES_REPO, "path": full_path}
         )
 
     @tool(
@@ -37,15 +40,16 @@ class GermanNotesTool(ToolSetHandler):
             "properties": {
                 "filepath": {
                     "type": "string",
-                    "description": "Path to the note file"
+                    "description": "Path to the note file (relative to German folder)"
                 }
             },
             "required": ["filepath"]
         }
     )
     async def get_note(self, filepath: str) -> str:
+        full_path = f"{NOTES_PATH}/{filepath}"
         return await self.call_other_tool(
-            "gitea_notes", "get_note", {"repo": GERMAN_REPO, "filepath": filepath}
+            BASE_NOTES_TOOL, "get_note", {"repo": NOTES_REPO, "filepath": full_path}
         )
 
     @tool(
@@ -55,7 +59,7 @@ class GermanNotesTool(ToolSetHandler):
             "properties": {
                 "filepath": {
                     "type": "string",
-                    "description": "Path where the note should be created"
+                    "description": "Path where the note should be created (relative to German folder)"
                 },
                 "content": {
                     "type": "string",
@@ -71,9 +75,10 @@ class GermanNotesTool(ToolSetHandler):
         }
     )
     async def create_note(self, filepath: str, content: str, commit_message: str = "Create note") -> str:
+        full_path = f"{NOTES_PATH}/{filepath}"
         return await self.call_other_tool(
-            "gitea_notes", "create_note",
-            {"repo": GERMAN_REPO, "filepath": filepath, "content": content, "commit_message": commit_message}
+            BASE_NOTES_TOOL, "create_note",
+            {"repo": NOTES_REPO, "filepath": full_path, "content": content, "commit_message": commit_message}
         )
 
     @tool(
@@ -83,7 +88,7 @@ class GermanNotesTool(ToolSetHandler):
             "properties": {
                 "filepath": {
                     "type": "string",
-                    "description": "Path to the note file to update"
+                    "description": "Path to the note file to update (relative to German folder)"
                 },
                 "content": {
                     "type": "string",
@@ -99,7 +104,8 @@ class GermanNotesTool(ToolSetHandler):
         }
     )
     async def update_note(self, filepath: str, content: str, commit_message: str = "Update note") -> str:
+        full_path = f"{NOTES_PATH}/{filepath}"
         return await self.call_other_tool(
-            "gitea_notes", "update_note",
-            {"repo": GERMAN_REPO, "filepath": filepath, "content": content, "commit_message": commit_message}
+            BASE_NOTES_TOOL, "update_note",
+            {"repo": NOTES_REPO, "filepath": full_path, "content": content, "commit_message": commit_message}
         )
