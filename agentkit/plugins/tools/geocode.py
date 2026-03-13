@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class GeocodingTool(ToolSetHandler):
     """Tool for converting location names to coordinates using geopy"""
 
-    def __init__(self, name: str = "geocoding"):
+    def __init__(self, name: str = "geocode"):
         super().__init__(name)
 
     @tool(
