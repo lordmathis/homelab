@@ -67,7 +67,7 @@ class GiteaNotes(ToolSetHandler):
             excluded_set = set(excluded_folders) if excluded_folders else None
 
             result = await self.call_other_tool(
-                "gitea__get_dir_content",
+                "gitea__get_dir_contents",
                 {
                     "owner": REPO_OWNER,
                     "repo": repo,
@@ -110,7 +110,7 @@ class GiteaNotes(ToolSetHandler):
             logger.debug(f"Getting note: repo='{repo}' filepath='{filepath}'")
 
             result = await self.call_other_tool(
-                "gitea__get_file_content",
+                "gitea__get_file_contents",
                 {
                     "owner": REPO_OWNER,
                     "repo": repo,
@@ -162,7 +162,7 @@ class GiteaNotes(ToolSetHandler):
     async def create_note(self, repo: str, filepath: str, content: str, commit_message: str = "Create note") -> str:
         try:
             await self.call_other_tool(
-                "gitea__create_file",
+                "gitea__create_or_update_file",
                 {
                     "owner": REPO_OWNER,
                     "repo": repo,
@@ -210,7 +210,7 @@ class GiteaNotes(ToolSetHandler):
             logger.debug(f"Updating note: repo='{repo}' filepath='{filepath}'")
 
             await self.call_other_tool(
-                "gitea__update_file",
+                "gitea__create_or_update_file",
                 {
                     "owner": REPO_OWNER,
                     "repo": repo,
