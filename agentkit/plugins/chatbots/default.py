@@ -1,4 +1,4 @@
-from agentkit.chatbots.react import ReActAgentPlugin
+from agentkit.agents import ReActAgentPlugin
 
 
 class DefaultChatbot(ReActAgentPlugin):

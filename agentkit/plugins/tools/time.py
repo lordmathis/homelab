@@ -9,9 +9,10 @@ logger = logging.getLogger(__name__)
 
 
 class TimeTools(ToolSetHandler):
+    server_name = "time"
 
-    def __init__(self, name: str = "time"):
-        super().__init__(name)
+    def __init__(self):
+        super().__init__()
 
     @tool(
         description=(

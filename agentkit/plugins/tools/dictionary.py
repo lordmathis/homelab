@@ -8,9 +8,10 @@ DWDS_BASE_URL = "https://www.dwds.de/wb"
 
 
 class DictionaryTool(ToolSetHandler):
+    server_name = "dictionary"
 
-    def __init__(self, name: str = "dictionary"):
-        super().__init__(name)
+    def __init__(self):
+        super().__init__()
 
     @tool(
         description=(
@@ -31,4 +32,4 @@ class DictionaryTool(ToolSetHandler):
     async def lookup_word(self, word: str) -> str:
         url = f"{DWDS_BASE_URL}/{word}"
         logger.info(f"Looking up German word '{word}' at {url}")
-        return await self.call_other_tool("web_tools", "fetch_page", {"url": url, "include_links": False})
+        return await self.call_other_tool("web_tools__fetch_page", {"url": url, "include_links": False})
