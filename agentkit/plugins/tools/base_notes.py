@@ -12,9 +12,10 @@ DEFAULT_BRANCH = "main"
 
 
 class GiteaNotes(ToolSetHandler):
+    server_name = "base_notes"
 
-    def __init__(self, name: str = "base_notes"):
-        super().__init__(name)
+    def __init__(self):
+        super().__init__()
 
     def _format_tree(self, entries: List[Dict], excluded_folders: set = None) -> List[str]:
         if excluded_folders:
@@ -66,8 +67,7 @@ class GiteaNotes(ToolSetHandler):
             excluded_set = set(excluded_folders) if excluded_folders else None
 
             result = await self.call_other_tool(
-                GITEA_SERVER,
-                "get_dir_content",
+                "gitea__get_dir_content",
                 {
                     "owner": REPO_OWNER,
                     "repo": repo,
@@ -110,8 +110,7 @@ class GiteaNotes(ToolSetHandler):
             logger.debug(f"Getting note: repo='{repo}' filepath='{filepath}'")
 
             result = await self.call_other_tool(
-                GITEA_SERVER,
-                "get_file_content",
+                "gitea__get_file_content",
                 {
                     "owner": REPO_OWNER,
                     "repo": repo,
@@ -163,8 +162,7 @@ class GiteaNotes(ToolSetHandler):
     async def create_note(self, repo: str, filepath: str, content: str, commit_message: str = "Create note") -> str:
         try:
             await self.call_other_tool(
-                GITEA_SERVER,
-                "create_file",
+                "gitea__create_file",
                 {
                     "owner": REPO_OWNER,
                     "repo": repo,
@@ -212,8 +210,7 @@ class GiteaNotes(ToolSetHandler):
             logger.debug(f"Updating note: repo='{repo}' filepath='{filepath}'")
 
             await self.call_other_tool(
-                GITEA_SERVER,
-                "update_file",
+                "gitea__update_file",
                 {
                     "owner": REPO_OWNER,
                     "repo": repo,

@@ -11,14 +11,15 @@ logger = logging.getLogger(__name__)
 
 
 class AnkiTool(ToolSetHandler):
+    server_name = "anki"
 
     ANKI_CONNECT_URL = "http://host.docker.internal:8765"
     AUDIO_SERVICE_URL = "http://host.docker.internal:9100"
     ANKI_CONNECT_VERSION = 6
     DECK_NAME = "German::Sentences"
 
-    def __init__(self, name: str = "anki"):
-        super().__init__(name)
+    def __init__(self):
+        super().__init__()
 
     async def _anki_request(self, action: str, params: Dict = None) -> Any:
         payload = {

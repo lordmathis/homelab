@@ -11,9 +11,10 @@ EXCLUDED_FOLDERS = ["🇩🇪 German", "🧑‍🍳 Recipes", "💻 CompSci"]
 
 
 class KnowledgeBaseTool(ToolSetHandler):
+    server_name = "knowledge_base"
 
-    def __init__(self, name: str = "knowledge_base"):
-        super().__init__(name)
+    def __init__(self):
+        super().__init__()
 
     @tool(
         description="List all knowledge base notes as a file tree (excludes German, Recipes, and CompSci folders)",
@@ -30,7 +31,7 @@ class KnowledgeBaseTool(ToolSetHandler):
     )
     async def list_notes(self, path: str = "") -> str:
         return await self.call_other_tool(
-            BASE_NOTES_TOOL, "list_notes", 
+            "base_notes__list_notes", 
             {"repo": NOTES_REPO, "path": path, "excluded_folders": EXCLUDED_FOLDERS}
         )
 
@@ -53,7 +54,7 @@ class KnowledgeBaseTool(ToolSetHandler):
             return "Access denied: Cannot access notes in specialized folders. Use german_notes, recipes_notes, or computer_science_notes tools instead."
         
         return await self.call_other_tool(
-            BASE_NOTES_TOOL, "get_note", {"repo": NOTES_REPO, "filepath": filepath}
+            "base_notes__get_note", {"repo": NOTES_REPO, "filepath": filepath}
         )
 
     @tool(
@@ -84,7 +85,7 @@ class KnowledgeBaseTool(ToolSetHandler):
             return "Access denied: Cannot create notes in specialized folders. Use german_notes, recipes_notes, or computer_science_notes tools instead."
         
         return await self.call_other_tool(
-            BASE_NOTES_TOOL, "create_note",
+            "base_notes__create_note",
             {"repo": NOTES_REPO, "filepath": filepath, "content": content, "commit_message": commit_message}
         )
 
@@ -116,6 +117,6 @@ class KnowledgeBaseTool(ToolSetHandler):
             return "Access denied: Cannot update notes in specialized folders. Use german_notes, recipes_notes, or computer_science_notes tools instead."
         
         return await self.call_other_tool(
-            BASE_NOTES_TOOL, "update_note",
+            "base_notes__update_note",
             {"repo": NOTES_REPO, "filepath": filepath, "content": content, "commit_message": commit_message}
         )

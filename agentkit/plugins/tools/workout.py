@@ -16,9 +16,10 @@ logger = logging.getLogger(__name__)
 
 class WorkoutToolset(ToolSetHandler):
     """Template-driven workout logging toolset"""
+    server_name = "workout"
 
     def __init__(self):
-        super().__init__("workout")
+        super().__init__()
         self.db_path: Optional[str] = None
         self.current_workout_id: Optional[str] = None
         self.current_template_id: Optional[str] = None

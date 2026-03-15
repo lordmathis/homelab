@@ -24,9 +24,10 @@ logger = logging.getLogger(__name__)
 
 class CalDAVTools(ToolSetHandler):
     """Tools for managing tasks via CalDAV protocol"""
+    server_name = "tasks"
 
     def __init__(self):
-        super().__init__(name="tasks")
+        super().__init__()
         self._client: Optional[caldav.DAVClient] = None
         self._principal: Optional[caldav.Principal] = None
         self._url = os.getenv("CALDAV_URL")

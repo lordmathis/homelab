@@ -42,9 +42,10 @@ def _serialize_skill_file(frontmatter: dict, body: str) -> str:
 
 
 class SkillsTool(ToolSetHandler):
+    server_name = "skills"
 
-    def __init__(self, name: str = "skills"):
-        super().__init__(name)
+    def __init__(self):
+        super().__init__()
         self._skills_dir: Optional[Path] = None
 
     async def initialize(self) -> None:
