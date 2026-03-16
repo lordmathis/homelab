@@ -1,12 +1,12 @@
 from agentkit.agents import ReActAgentPlugin
 
 
-class DefaultChatbot(ReActAgentPlugin):
+class DefaultAgent(ReActAgentPlugin):
     default = True
-    name = "Default"
+    name = "Default Agent"
     provider_id = "llamactl"
     model_id = "Qwen3_5-27B-GGUF"
-    tool_servers = ["time", "knowledge_base", "tasks", "geocode", "web_tools"]
+    tool_servers = ["time", "knowledge_base", "tasks", "web_tools"]
     max_iterations = 20
 
     system_prompt = """

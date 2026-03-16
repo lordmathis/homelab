@@ -5,7 +5,7 @@ from agentkit.tools.toolset_handler import ToolSetHandler, tool
 logger = logging.getLogger(__name__)
 
 NOTES_REPO = "Notes"
-NOTES_PATH = "🇩🇪 German"
+NOTES_PATH = "🥨 German"
 BASE_NOTES_TOOL = "base_notes"
 
 
