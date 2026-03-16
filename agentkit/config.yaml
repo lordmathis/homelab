@@ -17,7 +17,7 @@ mcps:
       - ${OPENWEATHERMAP_API_KEY}
 
 plugins:
-  chatbots_dir: "/app/plugins/chatbots"
+  agents_dir: "/app/plugins/agents"
   tools_dir: "/app/plugins/tools"
   skills_dir: "/app/plugins/skills"
 
@@ -42,5 +42,8 @@ logging:
 transcription:
   base_url: "http://host.docker.internal:9100"
 
-github_token: "${GITHUB_TOKEN}"
+repo_browser:
+  type: "github"
+  token: "${GITHUB_TOKEN}"
+
 history_db_path: "/app/data/agentkit.db"

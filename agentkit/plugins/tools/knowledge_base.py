@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 NOTES_REPO = "Notes"
 BASE_NOTES_TOOL = "base_notes"
 
-EXCLUDED_FOLDERS = ["🇩🇪 German", "🧑‍🍳 Recipes", "💻 CompSci"]
+EXCLUDED_FOLDERS = ["🥨 German", "🧑‍🍳 Recipes", "💻 CompSci"]
 
 
 class KnowledgeBaseTool(ToolSetHandler):
