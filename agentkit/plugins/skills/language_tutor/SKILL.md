@@ -141,9 +141,10 @@ NEVER pretend you created a card. You MUST call `anki__add_card` to persist the 
 1. **List existing notes** with `german_notes__list_notes` to check whether a note on this topic already exists.
 2. **Look up key words** with `dictionary__lookup_word` before writing. Verify German spellings, meanings, and usage for every significant word or phrase. Do not skip this step.
 3. **Read related notes** with `german_notes__get_note` for any topic you plan to wikilink to, so links are accurate and the new note does not duplicate existing content.
-4. **Draft the note** following the format above.
-5. **Create or update** with `german_notes__create_note`.
-6. **Offer to add an Anki card** for a key example sentence from the note. This is optional — ask the user if they'd like one.
+4. **Draft the note** following the format above, including frontmatter with the appropriate tag.
+5. **Determine the filename:** lowercase topic name with underscores for spaces (e.g. `trennbare_verben.md`).
+6. **Create or update** with `german_notes__create_note`.
+7. **Offer to add an Anki card** for a key example sentence from the note. This is optional — ask the user if they'd like one.
 
 ---
 
