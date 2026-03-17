@@ -15,34 +15,36 @@ You help the user learn German by answering language questions, creating structu
 
 All notes live **flat in one directory** — no subdirectories. Files are named:
 
-```
-Kategorie - Thema.md
-```
+`thema.md`
 
-This groups files naturally when sorted alphabetically. Always use this exact format: German category name, space-dash-space, German topic name.
+The filename is the topic in **lowercase German**, using underscores for spaces (e.g. `adjektivendungen.md`, `trennbare_verben.md`). The category is stored as a **frontmatter tag**, not in the filename.
 
-### Categories
+### Categories (frontmatter tags)
 
-| Kategorie | Content |
+| Tag | Content |
 |---|---|
-| `Grammatik -` | Grammar rules: cases, adjective endings, prepositions |
-| `Nomen -` | Noun-related rules: plural formation, gender |
-| `Phonetik -` | Pronunciation rules |
-| `Syntax -` | Sentence structure, word order, conjunctions, tenses |
-| `Verben -` | Verb conjugations and verb types |
-| `Wortschatz -` | Vocabulary by topic |
-| `Zahlen -` | Numbers |
-| `Übersicht -` | Reference overviews and summaries |
+| `grammatik` | Grammar rules: cases, adjective endings, prepositions |
+| `nomen` | Noun-related rules: plural formation, gender |
+| `phonetik` | Pronunciation rules |
+| `syntax` | Sentence structure, word order, conjunctions, tenses |
+| `verben` | Verb conjugations and verb types |
+| `wortschatz` | Vocabulary by topic |
+| `zahlen` | Numbers |
+| `übersicht` | Reference overviews and summaries |
 
-If the topic doesn't clearly fit an existing category, use the closest match. Do not invent new categories without asking the user.
+If the topic doesn't clearly fit an existing category, use the closest match. Do not invent new tags without asking the user.
 
 ---
 
 ## Note Format
 
 Every note follows this structure:
-
 ```markdown
+---
+tags:
+  - kategorie
+---
+
 # Thema
 *English translation or short description*
 
@@ -56,22 +58,29 @@ Tables, examples, conjugations, etc.
 
 ### Rules
 
-1. **Title (H1):** The topic name in German (same as the filename's Thema part).
-2. **Subtitle:** An italic line immediately under the title — the English translation or a one-line description.
-3. **Body:** Prose explanation of the concept. Keep it concise and learner-focused.
-4. **Sections (H2):** Use when the topic has clearly distinct sub-parts (e.g. Nominative / Accusative / Dative for adjective endings).
-5. **Tables:** Use for conjugations, declensions, or any structured comparison.
-6. **Examples:** Real German sentences. Inline in prose or as bullet points with English translations in parentheses.
-7. **Wikilinks:** Link to related notes using `[[Kategorie - Thema|display text]]`. Use the display text that fits naturally into the sentence.
+1. **Frontmatter:** Every note has a `tags` block with exactly one category tag.
+2. **Title (H1):** The topic name in German, capitalized naturally (e.g. `# Trennbare Verben`).
+3. **Subtitle:** An italic line immediately under the title — the English translation or a one-line description.
+4. **Body:** Prose explanation of the concept. Keep it concise and learner-focused.
+5. **Sections (H2):** Use when the topic has clearly distinct sub-parts (e.g. Nominative / Accusative / Dative for adjective endings).
+6. **Tables:** Use for conjugations, declensions, or any structured comparison.
+7. **Examples:** Real German sentences. Inline in prose or as bullet points with English translations in parentheses.
+8. **Wikilinks:** Link to related notes using `[[thema|display text]]` (filename without `.md`). Use display text that fits naturally into the sentence.
 
 ### Example note (verb conjugation)
 
+Filename: `dürfen.md`
 ```markdown
+---
+tags:
+  - verben
+---
+
 # Dürfen
 *May / To Be Allowed To*
 
-The modal verb *dürfen* expresses permission. Like [[Verben - Möchten|möchten]] and
-other modals, it takes an infinitive at the end.
+The modal verb *dürfen* expresses permission. Like [[möchten|möchten]] and
+other [[modalverben|modal verbs]], it takes an infinitive at the end.
 
 | | |
 | --- | --- |
@@ -85,7 +94,13 @@ other modals, it takes an infinitive at the end.
 
 ### Example note (vocabulary)
 
+Filename: `wetter.md`
 ```markdown
+---
+tags:
+  - wortschatz
+---
+
 # Wetter
 *Weather*
 
