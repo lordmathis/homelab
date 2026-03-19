@@ -42,8 +42,9 @@ logging:
 transcription:
   base_url: "http://host.docker.internal:9100"
 
-repo_browser:
-  type: "github"
-  token: "${GITHUB_TOKEN}"
+connectors:
+  github:
+    type: "github"
+    token: "${GITHUB_TOKEN}"
 
 history_db_path: "/app/data/agentkit.db"
