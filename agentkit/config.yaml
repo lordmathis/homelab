@@ -46,5 +46,9 @@ connectors:
   github:
     type: "github"
     token: "${GITHUB_TOKEN}"
+  forgejo:
+    type: "forgejo"
+    base_url: "${GITEA_HOST}/api/v1"
+    token: "${GITEA_ACCESS_TOKEN}"
 
 history_db_path: "/app/data/agentkit.db"

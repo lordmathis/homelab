@@ -31,11 +31,11 @@ for service in config["services"]:
 
 # Write config
 OUTPUT_FILE.write_text("\n".join(output))
-print(f"✓ Generated config with {len(config['services'])} services")
+print(f"nginx config written to {OUTPUT_FILE}")
 
 # Test and restart
 if subprocess.run(["nginx", "-t"]).returncode != 0:
     sys.exit(1)
 
 subprocess.run(["brew", "services", "restart", "nginx"])
-print("✓ Done")
+print("Done")

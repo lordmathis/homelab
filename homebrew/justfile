@@ -1,0 +1,9 @@
+# Homebrew commands and services
+
+default:
+    @just --list --unsorted
+
+update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    brew bundle install
