@@ -1,0 +1,24 @@
+# Agentkit service
+
+default:
+    @just --list --unsorted
+
+build:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose build
+
+start:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose up -d
+
+stop:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose down
+
+restart:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose restart

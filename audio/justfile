@@ -1,0 +1,27 @@
+# Audio service (STT + TTS)
+
+PLIST_NAME := "com.audio.plist"
+PLIST_SRC  := justfile_directory() / PLIST_NAME
+PLIST_DST  := env_var("HOME") / "Library/LaunchAgents" / PLIST_NAME
+
+# Show available commands
+default:
+    @just --list --unsorted
+
+# Start the audio service
+start:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs/audio"
+    [ -e "{{ PLIST_DST }}" ] && launchctl unload "{{ PLIST_DST }}" 2>/dev/null || true
+    ln -sf "{{ PLIST_SRC }}" "{{ PLIST_DST }}"
+    launchctl load "{{ PLIST_DST }}"
+    echo "Audio service started at http://localhost:9100"
+
+# Stop the audio service
+stop:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    launchctl unload "{{ PLIST_DST }}" 2>/dev/null || true
+    rm -f "{{ PLIST_DST }}"
+    echo "Audio service stopped"

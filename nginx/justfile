@@ -1,0 +1,29 @@
+# Nginx proxy config generator
+
+# Show available commands
+default:
+    @just --list --unsorted
+
+# Setup virtual environment and install dependencies
+setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    uv sync
+    echo "✓ Setup complete"
+
+# Generate nginx proxy config from config.yaml
+generate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    uv run generate.py
+    echo "✓ Config generated"
+
+restart:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    brew service restart nginx
+
+check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    nginx -t

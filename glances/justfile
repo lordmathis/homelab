@@ -1,0 +1,24 @@
+# Glances system monitor
+
+PLIST_NAME := "com.glances.plist"
+PLIST_SRC  := justfile_directory() / PLIST_NAME
+PLIST_DST  := env_var("HOME") / "Library/LaunchAgents" / PLIST_NAME
+
+default:
+    @just --list --unsorted
+
+start:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs/glances"
+    [ -e "{{ PLIST_DST }}" ] && launchctl unload "{{ PLIST_DST }}" 2>/dev/null || true
+    ln -sf "{{ PLIST_SRC }}" "{{ PLIST_DST }}"
+    launchctl load "{{ PLIST_DST }}"
+    echo "Glances service started at http://localhost:9010"
+
+stop:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    launchctl unload "{{ PLIST_DST }}" 2>/dev/null || true
+    rm -f "{{ PLIST_DST }}"
+    echo "Glances service stopped"
