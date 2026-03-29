@@ -20,7 +20,7 @@ logdy *ARGS:
     just -f logdy/justfile {{ ARGS }}
 
 # Homebrew commands and services
-homebrew *ARGS:
+brew *ARGS:
     just -f homebrew/justfile {{ ARGS }}
 
 # Glances system monitor
