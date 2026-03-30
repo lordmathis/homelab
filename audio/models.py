@@ -66,7 +66,7 @@ class STTModelManager(ModelManager):
 class TTSModelManager(ModelManager):
     def __init__(self):
         super().__init__()
-        self.model_name = "mlx-community/chatterbox-fp16"
+        self.model_name = "mlx-community/Voxtral-4B-TTS-2603-mlx-bf16"
 
     def _load_model(self):
         return load_tts_model(self.model_name)
@@ -75,8 +75,12 @@ class TTSModelManager(ModelManager):
         """Generate speech audio from text. Returns WAV bytes."""
         model = self._get_model()
 
+        voice = "casual_male"
+        if lang_code == "de":
+            voice = "de_male"
+
         audio_chunks = []
-        for result in model.generate(text, lang_code=lang_code):
+        for result in model.generate(text, voice=voice):
             audio_chunks.append(result.audio)
 
         if not audio_chunks:
