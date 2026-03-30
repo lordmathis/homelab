@@ -6,19 +6,19 @@ default:
 build:
     #!/usr/bin/env bash
     set -euo pipefail
-    docker compose build
+    docker-compose build
 
 start:
     #!/usr/bin/env bash
     set -euo pipefail
-    docker compose up -d
+    docker-compose up -d
 
 stop:
     #!/usr/bin/env bash
     set -euo pipefail
-    docker compose down
+    docker-compose down
 
 restart:
     #!/usr/bin/env bash
     set -euo pipefail
-    docker compose restart
+    docker-compose restart
