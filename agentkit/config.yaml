@@ -1,3 +1,7 @@
+server:
+  host: ""
+  port: 9002
+
 mcps:
   gitea:
     command: gitea-mcp
@@ -8,18 +12,11 @@ mcps:
     env:
       GITEA_HOST: "${GITEA_HOST}"
       GITEA_ACCESS_TOKEN: "${GITEA_ACCESS_TOKEN}"
-  openweathermap:
-    command: "npx"
-    type: "stdio"
-    args:
-      - "@tristau/openweathermap-mcp"
-      - "--apikey"
-      - ${OPENWEATHERMAP_API_KEY}
 
 plugins:
-  agents_dir: "/app/plugins/agents"
-  tools_dir: "/app/plugins/tools"
-  skills_dir: "/app/plugins/skills"
+  agents_dir: "./plugins/agents"
+  tools_dir: "./plugins/tools"
+  skills_dir: "./plugins/skills"
 
 providers:
   llamactl:
@@ -35,12 +32,22 @@ providers:
   google:
     api_base: "https://generativelanguage.googleapis.com/v1beta/openai/"
     api_key: "${GEMINI_API_KEY}"
+  anthropic:
+    api_base: "https://api.anthropic.com/v1"
+    api_key: "${ANTHROPIC_API_KEY}"
+    model_ids:
+      - "claude-sonnet-4-6"
+      - "claude-haiku-4-5"
+    type: "anthropic"
+  z-ai:
+    api_base: "https://api.z.ai/api/coding/paas/v4"
+    api_key: "${ZAI_API_KEY}"
 
 logging:
-  target: "/app/logs/agentkit.log"
+  target: "stdout"
 
 transcription:
-  base_url: "http://host.docker.internal:9100"
+  base_url: "http://localhost:9100"
 
 connectors:
   github:
@@ -51,4 +58,4 @@ connectors:
     base_url: "${GITEA_HOST}/api/v1"
     token: "${GITEA_ACCESS_TOKEN}"
 
-history_db_path: "/app/data/agentkit.db"
+history_db_path: "./data/agentkit.db"

@@ -1,0 +1,17 @@
+[project]
+name = "agentkit"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "agents",
+    "aiohttp>=3.13.4",
+    "caldav>=3.1.0",
+    "geopy>=2.4.1",
+    "icalendar>=7.0.3",
+    "pyyaml>=6.0.3",
+]
+
+[tool.uv.sources]
+agents = { url = "https://github.com/lordmathis/agentkit/releases/download/v27/agents-27-py3-none-any.whl" }
