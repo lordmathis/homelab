@@ -14,4 +14,4 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-agents = { url = "https://github.com/lordmathis/agentkit/releases/download/v27/agents-27-py3-none-any.whl" }
+agents = { url = "https://github.com/lordmathis/agentkit/releases/download/v28/agents-28-py3-none-any.whl" }
