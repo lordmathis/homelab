@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 class AnkiTool(ToolSetHandler):
     server_name = "anki"
 
-    ANKI_CONNECT_URL = "http://host.docker.internal:8765"
-    AUDIO_SERVICE_URL = "http://host.docker.internal:9100"
+    ANKI_CONNECT_URL = "http://localhost:8765"
+    AUDIO_SERVICE_URL = "http://localhost:9100"
     ANKI_CONNECT_VERSION = 6
     DECK_NAME = "German::Sentences"
 
