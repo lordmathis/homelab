@@ -10,5 +10,6 @@ nginx/config.yaml
 
 agentkit/data/
 agentkit/logs/
+agentkit/uploads/
 
 *.wav

@@ -33,7 +33,7 @@ providers:
     api_base: "https://generativelanguage.googleapis.com/v1beta/openai/"
     api_key: "${GEMINI_API_KEY}"
   anthropic:
-    api_base: "https://api.anthropic.com/v1"
+    api_base: "https://api.anthropic.com"
     api_key: "${ANTHROPIC_API_KEY}"
     model_ids:
       - "claude-sonnet-4-6"
