@@ -222,7 +222,8 @@ class WorkoutToolset(ToolSetHandler):
         description=(
             "Start a new workout session. Automatically selects the next template via round-robin "
             "(least recently used active template), loads the last session for that template so the "
-            "agent can show the user what they did before, and returns template exercises with targets. "
+            "agent can show the user what they did before, returns template exercises with targets, "
+            "and returns workout progress (first exercise to do). "
             "Call this at the beginning of every workout."
         ),
         parameters={
@@ -257,6 +258,7 @@ class WorkoutToolset(ToolSetHandler):
 
         exercises = self._get_template_exercises(template["id"], conn)
         last_session = self._get_last_session_for_template(template["id"], conn)
+        progress = self._get_workout_progress(self.current_workout_id, self.current_template_id, conn)
         conn.close()
 
         return {
@@ -267,7 +269,8 @@ class WorkoutToolset(ToolSetHandler):
                 "name": template["name"],
                 "exercises": exercises
             },
-            "last_session": last_session  # None if first time doing this template
+            "last_session": last_session,
+            "progress": progress
         }
 
     @tool(
