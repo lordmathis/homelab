@@ -26,6 +26,10 @@ stop:
     rm -f "{{ PLIST_DST }}"
     echo "Agentkit service stopped"
 
+# Sync dependencies using uv
+update:
+    uv sync
+
 # Install/update gitea-mcp binary
 update-mcps:
     #!/usr/bin/env bash
