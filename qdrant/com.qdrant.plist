@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.qdrant</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/matus/bin/qdrant</string>
+    </array>
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>WorkingDirectory</key>
+    <string>/Users/matus/homelab/qdrant</string>
+    <key>StandardOutPath</key>
+    <string>/Users/matus/Library/Logs/qdrant/qdrant.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/matus/Library/Logs/qdrant/qdrant.error.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/bin:/bin:/usr/sbin:/sbin:/Users/matus/bin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>

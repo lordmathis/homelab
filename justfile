@@ -30,3 +30,7 @@ glances *ARGS:
 # Agentkit service
 agentkit *ARGS:
     just -f agentkit/justfile {{ ARGS }}
+
+# Qdrant vector database
+qdrant *ARGS:
+    just -f qdrant/justfile {{ ARGS }}

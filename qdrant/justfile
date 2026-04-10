@@ -1,0 +1,56 @@
+# Qdrant vector database service
+
+PLIST_NAME := "com.qdrant.plist"
+PLIST_SRC  := justfile_directory() / PLIST_NAME
+PLIST_DST  := env_var("HOME") / "Library/LaunchAgents" / PLIST_NAME
+
+default:
+    @just --list --unsorted
+
+start:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs/qdrant" "{{ justfile_directory() }}/storage"
+    [ -e "{{ PLIST_DST }}" ] && launchctl unload "{{ PLIST_DST }}" 2>/dev/null || true
+    ln -sf "{{ PLIST_SRC }}" "{{ PLIST_DST }}"
+    launchctl load "{{ PLIST_DST }}"
+    echo "Qdrant service started"
+
+stop:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    launchctl unload "{{ PLIST_DST }}" 2>/dev/null || true
+    rm -f "{{ PLIST_DST }}"
+    echo "Qdrant service stopped"
+
+update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    DOWNLOAD_URL=$(curl -s https://api.github.com/repos/qdrant/qdrant/releases/latest | grep "browser_download_url" | grep "qdrant-aarch64-apple-darwin.tar.gz" | cut -d '"' -f 4)
+    INSTALL_PATH="$HOME/bin/qdrant"
+    command -v curl >/dev/null 2>&1 || { echo "curl required"; exit 1; }
+    command -v tar >/dev/null 2>&1 || { echo "tar required"; exit 1; }
+    if [ -f "$INSTALL_PATH" ]; then
+        echo "Removing existing installation..."
+        rm "$INSTALL_PATH"
+    fi
+    cd /tmp
+    echo "Downloading qdrant from $DOWNLOAD_URL..."
+    curl -L -o qdrant.tar.gz "$DOWNLOAD_URL"
+    mkdir -p "$HOME/bin"
+    tar -xzf qdrant.tar.gz
+    cp qdrant "$INSTALL_PATH"
+    if [ -f "$INSTALL_PATH" ]; then
+        xattr -dr com.apple.quarantine "$INSTALL_PATH" 2>/dev/null || true
+    fi
+    PARENT_DIR=$(dirname "$INSTALL_PATH")
+    SHELL_CONFIG="${HOME}/.zshrc"
+    [[ $SHELL == */bash ]] && SHELL_CONFIG="${HOME}/.bash_profile"
+    if ! grep -q "$PARENT_DIR" "$SHELL_CONFIG"; then
+        echo "export PATH=\"\$PATH:$PARENT_DIR\"" >> "$SHELL_CONFIG"
+        echo "Added $PARENT_DIR to PATH in $SHELL_CONFIG"
+    else
+        echo "$PARENT_DIR is already in PATH"
+    fi
+    rm -rf /tmp/qdrant* /tmp/qdrant.tar.gz
+    echo "Done. Installed to $INSTALL_PATH"
