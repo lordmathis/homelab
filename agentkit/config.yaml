@@ -46,8 +46,11 @@ providers:
 logging:
   target: "stdout"
 
-transcription:
-  base_url: "http://localhost:9100"
+audio:
+  transcription:
+    base_url: "http://localhost:9100"
+  tts:
+    base_url: "http://localhost:9100"
 
 connectors:
   github:
