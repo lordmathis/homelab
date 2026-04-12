@@ -17,7 +17,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agents", url = "https://github.com/lordmathis/agentkit/releases/download/v31/agents-31-py3-none-any.whl" },
+    { name = "agents", url = "https://github.com/lordmathis/agentkit/releases/download/v32/agents-32-py3-none-any.whl" },
     { name = "aiohttp", specifier = ">=3.13.4" },
     { name = "caldav", specifier = ">=3.1.0" },
     { name = "geopy", specifier = ">=2.4.1" },
@@ -27,8 +27,8 @@ requires-dist = [
 
 [[package]]
 name = "agents"
-version = "31"
-source = { url = "https://github.com/lordmathis/agentkit/releases/download/v31/agents-31-py3-none-any.whl" }
+version = "32"
+source = { url = "https://github.com/lordmathis/agentkit/releases/download/v32/agents-32-py3-none-any.whl" }
 dependencies = [
     { name = "anthropic" },
     { name = "beautifulsoup4" },
@@ -48,7 +48,7 @@ dependencies = [
     { name = "sqlalchemy" },
 ]
 wheels = [
-    { url = "https://github.com/lordmathis/agentkit/releases/download/v31/agents-31-py3-none-any.whl", hash = "sha256:f30a9014062fc37702603256d1a0cf76785b88879d103270bef409aca335705a" },
+    { url = "https://github.com/lordmathis/agentkit/releases/download/v32/agents-32-py3-none-any.whl", hash = "sha256:6b2518184a9eb6f1e2ca7eba1daf11d5b57a49600abbe6ab469692e48f63e442" },
 ]
 
 [package.metadata]
