@@ -44,6 +44,7 @@ Every note follows this structure:
 tags:
   - kategorie
 ---
+```
 
 # Thema
 *English translation or short description*
@@ -54,60 +55,58 @@ or grammatical labels. Cross-reference related notes using wikilinks.
 ## Section (if needed)
 
 Tables, examples, conjugations, etc.
-```
 
 ### Rules
 
 1. **Frontmatter:** Every note has a `tags` block with exactly one category tag.
 2. **Title (H1):** The topic name in German, capitalized naturally (e.g. `# Trennbare Verben`).
 3. **Subtitle:** An italic line immediately under the title — the English translation or a one-line description.
-4. **Body:** Prose explanation of the concept. Keep it concise and learner-focused.
-5. **Sections (H2):** Use when the topic has clearly distinct sub-parts (e.g. Nominative / Accusative / Dative for adjective endings).
-6. **Tables:** Use for conjugations, declensions, or any structured comparison.
-7. **Examples:** Real German sentences. Inline in prose or as bullet points with English translations in parentheses.
-8. **Wikilinks:** Link to related notes using `[[thema|display text]]` (filename without `.md`). Use display text that fits naturally into the sentence.
+4. **Body:** Prose explanation of the concept. Keep it concise and learner-focused. **One concept per note.** State the core rule once, clearly. Do not pad with exhaustive lists of sub-cases.
+5. **Sections (H2):** Only when the topic has truly distinct sub-parts that cannot be expressed inline (e.g. Nominative / Accusative tables). **Do not create sections just to organize bullet points.**
+6. **Tables:** Use for conjugations, declensions, or compact structured comparisons. Do not create tables that restate what was already said in prose.
+7. **Examples:** 2–4 real German sentences. Inline in prose or as bullet points with English translations in parentheses. Do not include more examples than needed to illustrate the rule.
+8. **Wikilinks:** Link to related notes using `[[thema|display text]]`. Do not create a "Related Notes" section — weave links into prose naturally.
 
-### Example note (verb conjugation)
+### Length Constraint
 
-Filename: `dürfen.md`
+**Notes should be short.** A typical note is 5–15 lines. If a note exceeds ~25 lines, it is almost certainly doing too much — split the concept or cut the padding.
+
+**Never include:**
+- "Common combinations" / "Common phrases" sections listing every possible collocation
+- "Key differences" summary tables that restate what the prose already explained
+- Multiple worked example sets (one set is enough)
+- "Grammar notes" footers covering things already in other notes
+- "See also" sections — use inline wikilinks instead
+
+### Anti-pattern: Exhaustive Coverage
+
+The note should capture the **learner's mental model**, not document every edge case. If you find yourself writing sub-sections for 5 different use cases of a verb, you are writing a dictionary entry, not a learner note.
+
+**Bad** (excerpt from over-engineered note):
 ```markdown
----
-tags:
-  - verben
----
-
-# Dürfen
-*May / To Be Allowed To*
-
-The modal verb *dürfen* expresses permission. Like [[möchten|möchten]] and
-other [[modalverben|modal verbs]], it takes an infinitive at the end.
-
-| | |
-| --- | --- |
-| ich | darf |
-| du | darfst |
-| er/sie/es | darf |
-| wir | dürfen |
-| ihr | dürft |
-| sie/Sie | dürfen |
+## Wechseln (to change/replace/switch)
+**Main uses:**
+1. Replace something old/unusable with something new:
+   - *Die Wäsche wechseln.* ...
+2. Change something you're using (clothes, job, place):
+   - *Können wir das Gesprächsthema wechseln?* ...
+3. Exchange money: ...
+4. Something changes/alters (intransitive): ...
+5. Switch places/positions: ...
+## Key Differences
+| Feature | *Austauschen* | *Wechseln* | ...
 ```
 
-### Example note (vocabulary)
-
-Filename: `wetter.md`
+**Good** (the actual note to produce):
 ```markdown
----
-tags:
-  - wortschatz
----
+**Austauschen** — mutual exchange between two parties (both give and receive).
+- *Sie tauschten ihre Meinungen aus.* (They exchanged their opinions.)
 
-# Wetter
-*Weather*
+**Wechseln** — replacement or change, can be done alone.
+- *Ich muss die Reifen wechseln.* (I need to change the tires.)
+- *Können Sie mir einen 20-Euro-Schein wechseln?* (Can you break a 20 euro note?)
 
-When additional information is given at the beginning of the sentence, *es* goes
-directly after the conjugated weather verb.
-- Am Wochenende schneit es. (On the weekend it will snow.)
-- An der Ostsee regnet es oft. (At the Baltic Sea it rains often.)
+Note: *austauschen* is [[trennbare_verben|separable]]; *wechseln* is not.
 ```
 
 ---
@@ -165,16 +164,6 @@ User says: *"Add a card: 'I am learning German' / 'Ich lerne Deutsch'"*
 
 User says: *"Add 'He goes to work every day' / 'Er geht jeden Tag zur Arbeit', note: separable verb"*
 → `anki__add_card(english_sentence="He goes to work every day", german_sentence="Er geht jeden Tag zur Arbeit", notes="Separable verb: gehen → er geht")`
-
----
-
-## Workflow: Note + Flashcard Together
-
-When the user asks to both learn a topic and practice it:
-
-1. Follow the **Creating or Updating a Note** workflow.
-2. Immediately after saving the note, call `anki__add_card` for a representative example sentence from the note.
-3. Confirm both: "Note saved and card added to the **German** deck."
 
 ---
 
