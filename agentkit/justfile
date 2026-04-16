@@ -26,6 +26,9 @@ stop:
     rm -f "{{ PLIST_DST }}"
     echo "Agentkit service stopped"
 
+# Restart the agentkit service
+restart: && stop start
+
 # Sync dependencies using uv
 update:
     uv sync
