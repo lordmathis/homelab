@@ -5,7 +5,7 @@ class DefaultAgent(ReActAgentPlugin):
     default = True
     name = "3X-1L-3D"
     provider_id = "llamactl"
-    model_id = "Qwen3_5-27B-GGUF"
+    model_id = "Qwen3_6-35B-A3B"
     tool_servers = ["time", "knowledge_base", "tasks", "web_tools"]
     max_iterations = 20
 

@@ -5,7 +5,7 @@ class WorkoutAgent(StructuredAgentPlugin):
     default = False
     name = "workout"
     provider_id = "llamactl"
-    model_id = "Qwen3_5-27B-GGUF"
+    model_id = "Qwen3_6-35B-A3B"
     tool_servers = ["workout"]
     max_iterations = 5
 
