@@ -22,3 +22,6 @@ stop:
     launchctl unload "{{ PLIST_DST }}" 2>/dev/null || true
     rm -f "{{ PLIST_DST }}"
     echo "Glances service stopped"
+
+# Restart the glances service
+restart: && stop start

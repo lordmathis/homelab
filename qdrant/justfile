@@ -23,6 +23,9 @@ stop:
     rm -f "{{ PLIST_DST }}"
     echo "Qdrant service stopped"
 
+# Restart the qdrant service
+restart: && stop start
+
 update:
     #!/usr/bin/env bash
     set -euo pipefail

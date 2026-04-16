@@ -36,6 +36,9 @@ stop:
     rm -f "{{ PLIST_DST }}"
     echo "Llamactl service stopped"
 
+# Restart the llamactl service
+restart: && stop start
+
 update:
     #!/usr/bin/env bash
     set -euo pipefail
