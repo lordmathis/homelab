@@ -61,4 +61,8 @@ connectors:
     base_url: "${GITEA_HOST}/api/v1"
     token: "${GITEA_ACCESS_TOKEN}"
 
+title_generation:
+  provider: "llamactl"
+  model: "Gemma-4-E4B"
+
 history_db_path: "./data/agentkit.db"

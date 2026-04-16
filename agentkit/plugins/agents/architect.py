@@ -4,7 +4,7 @@ class ArchitectAgent(ReActAgentPlugin):
     default = False
     name = "4RC-H17-3CT"
     provider_id = "llamactl"
-    model_id = "Qwen3_5-27B-GGUF"
+    model_id = "Qwen3_6-35B-A3B"
     tool_servers = []
     max_iterations = 5
 
