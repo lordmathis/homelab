@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional, Union
 import subprocess
 import shutil
 
-from agentkit.tools.toolset_handler import ToolSetHandler, tool
+from mikoshi.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ AVAILABLE_SERVICES = [
     "logdy",
     "brew",
     "glances",
-    "agentkit",
+    "mikoshi",
 ]
 
 SERVICES_DESC = f"Available services: {', '.join(AVAILABLE_SERVICES)}"

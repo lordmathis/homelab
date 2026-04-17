@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from ddgs import DDGS
 from markdownify import markdownify as md
 
-from agentkit.tools.toolset_handler import ToolSetHandler, tool
+from mikoshi.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class WebTools(ToolSetHandler):
         self._client = httpx.AsyncClient(
             timeout=30.0,
             follow_redirects=True,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; AgentKit/1.0)"},
+            headers={"User-Agent": "Mozilla/5.0 (compatible; Mikoshi/1.0)"},
         )
         self._ddgs = DDGS(**self._ddgs_kwargs)
 

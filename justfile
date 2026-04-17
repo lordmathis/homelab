@@ -27,9 +27,9 @@ brew *ARGS:
 glances *ARGS:
     just -f glances/justfile {{ ARGS }}
 
-# Agentkit service
-agentkit *ARGS:
-    just -f agentkit/justfile {{ ARGS }}
+# Mikoshi service
+mikoshi *ARGS:
+    just -f mikoshi/justfile {{ ARGS }}
 
 # Qdrant vector database
 qdrant *ARGS:

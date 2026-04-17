@@ -19,7 +19,7 @@
         <string>/Users/matus/Library/Logs/audio/audio.error.log</string>
         <string>/Users/matus/Library/Logs/glances/glances.log</string>
         <string>/Users/matus/Library/Logs/glances/glances.error.log</string>
-	<string>/Users/matus/homelab/agentkit/logs/agentkit.log</string>
+	<string>/Users/matus/homelab/mikoshi/logs/mikoshi.log</string>
         <string>/Users/matus/Library/Logs/logdy/logdy.log</string>
         <string>/Users/matus/Library/Logs/logdy/logdy.error.log</string>
     </array>

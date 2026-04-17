@@ -1,4 +1,4 @@
-from agentkit.agents import ReActAgentPlugin
+from mikoshi.agents import ReActAgentPlugin
 
 
 class DefaultAgent(ReActAgentPlugin):

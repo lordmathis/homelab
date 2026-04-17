@@ -1,4 +1,4 @@
-from agentkit.agents import StructuredAgentPlugin
+from mikoshi.agents import StructuredAgentPlugin
 
 
 class WorkoutAgent(StructuredAgentPlugin):
@@ -7,7 +7,7 @@ class WorkoutAgent(StructuredAgentPlugin):
     provider_id = "llamactl"
     model_id = "Qwen3_6-35B-A3B"
     tool_servers = ["workout"]
-    max_iterations = 5
+    max_iterations = 10
 
     system_prompt = """You are a workout logging assistant that tracks exercises using a template-driven flow. Every exercise set must be logged via tool calls — never acknowledge verbally without calling the logging tool.
 

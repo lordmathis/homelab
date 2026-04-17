@@ -1,6 +1,6 @@
-# Agentkit service
+# Mikoshi service
 
-PLIST_NAME := "lab.agentkit.plist"
+PLIST_NAME := "lab.mikoshi.plist"
 PLIST_SRC  := justfile_directory() / PLIST_NAME
 PLIST_DST  := env_var("HOME") / "Library/LaunchAgents" / PLIST_NAME
 
@@ -8,25 +8,25 @@ PLIST_DST  := env_var("HOME") / "Library/LaunchAgents" / PLIST_NAME
 default:
     @just --list --unsorted
 
-# Start the agentkit service
+# Start the mikoshi service
 start:
     #!/usr/bin/env bash
     set -euo pipefail
-    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs/agentkit"
+    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs/mikoshi"
     [ -e "{{ PLIST_DST }}" ] && launchctl unload "{{ PLIST_DST }}" 2>/dev/null || true
     ln -sf "{{ PLIST_SRC }}" "{{ PLIST_DST }}"
     launchctl load "{{ PLIST_DST }}"
-    echo "Agentkit service started"
+    echo "Mikoshi service started"
 
-# Stop the agentkit service
+# Stop the mikoshi service
 stop:
     #!/usr/bin/env bash
     set -euo pipefail
     launchctl unload "{{ PLIST_DST }}" 2>/dev/null || true
     rm -f "{{ PLIST_DST }}"
-    echo "Agentkit service stopped"
+    echo "Mikoshi service stopped"
 
-# Restart the agentkit service
+# Restart the mikoshi service
 restart: && stop start
 
 # Sync dependencies using uv

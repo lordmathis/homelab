@@ -1,22 +1,22 @@
 import logging
 
-from agentkit.tools.toolset_handler import ToolSetHandler, tool
+from mikoshi.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
 
 NOTES_REPO = "Notes"
-NOTES_PATH = "💻 CompSci"
+NOTES_PATH = "🥨 German"
 BASE_NOTES_TOOL = "base_notes"
 
 
-class CSNotesTool(ToolSetHandler):
-    server_name = "computer_science_notes"
+class GermanNotesTool(ToolSetHandler):
+    server_name = "german_notes"
 
     def __init__(self):
         super().__init__()
 
     @tool(
-        description="List all computer science notes as a file tree",
+        description="List all German learning notes as a file tree",
         parameters={
             "type": "object",
             "properties": {
@@ -35,13 +35,13 @@ class CSNotesTool(ToolSetHandler):
         )
 
     @tool(
-        description="Get the content of a specific computer science note",
+        description="Get the content of a specific German learning note",
         parameters={
             "type": "object",
             "properties": {
                 "filepath": {
                     "type": "string",
-                    "description": "Path to the note file (relative to CompSci folder)"
+                    "description": "Path to the note file (relative to German folder)"
                 }
             },
             "required": ["filepath"]
@@ -54,13 +54,13 @@ class CSNotesTool(ToolSetHandler):
         )
 
     @tool(
-        description="Create a new computer science note with specified content",
+        description="Create a new German learning note with specified content",
         parameters={
             "type": "object",
             "properties": {
                 "filepath": {
                     "type": "string",
-                    "description": "Path where the note should be created (relative to CompSci folder)"
+                    "description": "Path where the note should be created (relative to German folder)"
                 },
                 "content": {
                     "type": "string",
@@ -83,13 +83,13 @@ class CSNotesTool(ToolSetHandler):
         )
 
     @tool(
-        description="Update an existing computer science note with new content",
+        description="Update an existing German learning note with new content",
         parameters={
             "type": "object",
             "properties": {
                 "filepath": {
                     "type": "string",
-                    "description": "Path to the note file to update (relative to CompSci folder)"
+                    "description": "Path to the note file to update (relative to German folder)"
                 },
                 "content": {
                     "type": "string",

@@ -7,7 +7,7 @@ Local AI services (LLM inference, chat, audio) and infrastructure on Mac Mini M4
 | Service | Runtime | Purpose |
 |---------|---------|---------|
 | llamactl | launchd | LLM model management / routing (llama.cpp, MLX, vLLM) |
-| agentkit | Docker (Colima) | Chat UI with tools and skills |
+| mikoshi | Docker (Colima) | Chat UI with tools and skills |
 | glances | launchd | System monitoring dashboard |
 | logdy | launchd | Log viewer UI |
 | audio | launchd | OpenAI-compatible STT + TTS API |
@@ -36,17 +36,17 @@ cd llamactl
 ./stop.sh     # Stop service
 ```
 
-## AgentKit
+## Mikoshi
 
-A flexible [chat client](https://github.com/lordmathis/agentkit) with Web UI that integrates multiple AI providers, tools, and agent frameworks through a unified plugin architecture.
+A flexible [chat client](https://github.com/lordmathis/mikoshi) with Web UI that integrates multiple AI providers, tools, and agent frameworks through a unified plugin architecture.
 
 ```sh
-cd agentkit
+cd mikoshi
 docker compose up -d --build   # Build and start
 docker compose down            # Stop
 ```
 
-Plugins live in `agentkit/plugins/` and are volume-mounted into the container:
+Plugins live in `mikoshi/plugins/` and are volume-mounted into the container:
 
 ```
 plugins/
@@ -54,7 +54,7 @@ plugins/
   skills/<name>/    # Agent skill (SKILL.md, auto-discovered on startup)
 ```
 
-AgentKit connects to the audio service via `host.docker.internal:9100`.
+Mikoshi connects to the audio service via `host.docker.internal:9100`.
 
 ## Audio Service
 
@@ -94,7 +94,7 @@ cd glances
 
 ## Logdy
 
-Web-based log viewer using [Logdy](https://logdy.dev). Follows logs from all services (llamactl, audio, glances, agentkit) on port 9011.
+Web-based log viewer using [Logdy](https://logdy.dev). Follows logs from all services (llamactl, audio, glances, mikoshi) on port 9011.
 
 ```sh
 cd logdy

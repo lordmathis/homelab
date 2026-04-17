@@ -1,22 +1,23 @@
 import logging
 
-from agentkit.tools.toolset_handler import ToolSetHandler, tool
+from mikoshi.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
 
 NOTES_REPO = "Notes"
-NOTES_PATH = "🥨 German"
 BASE_NOTES_TOOL = "base_notes"
 
+EXCLUDED_FOLDERS = ["🥨 German", "🧑‍🍳 Recipes", "💻 CompSci"]
 
-class GermanNotesTool(ToolSetHandler):
-    server_name = "german_notes"
+
+class KnowledgeBaseTool(ToolSetHandler):
+    server_name = "knowledge_base"
 
     def __init__(self):
         super().__init__()
 
     @tool(
-        description="List all German learning notes as a file tree",
+        description="List all knowledge base notes as a file tree (excludes German, Recipes, and CompSci folders)",
         parameters={
             "type": "object",
             "properties": {
@@ -29,38 +30,41 @@ class GermanNotesTool(ToolSetHandler):
         }
     )
     async def list_notes(self, path: str = "") -> str:
-        full_path = f"{NOTES_PATH}/{path}".strip("/") if path else NOTES_PATH
         return await self.call_other_tool(
-            "base_notes__list_notes", {"repo": NOTES_REPO, "path": full_path}
+            "base_notes__list_notes", 
+            {"repo": NOTES_REPO, "path": path, "excluded_folders": EXCLUDED_FOLDERS}
         )
 
     @tool(
-        description="Get the content of a specific German learning note",
+        description="Get the content of a specific knowledge base note (cannot access German, Recipes, or CompSci folders)",
         parameters={
             "type": "object",
             "properties": {
                 "filepath": {
                     "type": "string",
-                    "description": "Path to the note file (relative to German folder)"
+                    "description": "Path to the note file (cannot be in German, Recipes, or CompSci folders)"
                 }
             },
             "required": ["filepath"]
         }
     )
     async def get_note(self, filepath: str) -> str:
-        full_path = f"{NOTES_PATH}/{filepath}"
+        first_folder = filepath.split("/")[0] if "/" in filepath else filepath
+        if first_folder in EXCLUDED_FOLDERS:
+            return "Access denied: Cannot access notes in specialized folders. Use german_notes, recipes_notes, or computer_science_notes tools instead."
+        
         return await self.call_other_tool(
-            "base_notes__get_note", {"repo": NOTES_REPO, "filepath": full_path}
+            "base_notes__get_note", {"repo": NOTES_REPO, "filepath": filepath}
         )
 
     @tool(
-        description="Create a new German learning note with specified content",
+        description="Create a new knowledge base note with specified content (cannot create in German, Recipes, or CompSci folders)",
         parameters={
             "type": "object",
             "properties": {
                 "filepath": {
                     "type": "string",
-                    "description": "Path where the note should be created (relative to German folder)"
+                    "description": "Path where the note should be created (cannot be in German, Recipes, or CompSci folders)"
                 },
                 "content": {
                     "type": "string",
@@ -76,20 +80,23 @@ class GermanNotesTool(ToolSetHandler):
         }
     )
     async def create_note(self, filepath: str, content: str, commit_message: str = "Create note") -> str:
-        full_path = f"{NOTES_PATH}/{filepath}"
+        first_folder = filepath.split("/")[0] if "/" in filepath else filepath
+        if first_folder in EXCLUDED_FOLDERS:
+            return "Access denied: Cannot create notes in specialized folders. Use german_notes, recipes_notes, or computer_science_notes tools instead."
+        
         return await self.call_other_tool(
             "base_notes__create_note",
-            {"repo": NOTES_REPO, "filepath": full_path, "content": content, "commit_message": commit_message}
+            {"repo": NOTES_REPO, "filepath": filepath, "content": content, "commit_message": commit_message}
         )
 
     @tool(
-        description="Update an existing German learning note with new content",
+        description="Update an existing knowledge base note with new content (cannot update notes in German, Recipes, or CompSci folders)",
         parameters={
             "type": "object",
             "properties": {
                 "filepath": {
                     "type": "string",
-                    "description": "Path to the note file to update (relative to German folder)"
+                    "description": "Path to the note file to update (cannot be in German, Recipes, or CompSci folders)"
                 },
                 "content": {
                     "type": "string",
@@ -105,8 +112,11 @@ class GermanNotesTool(ToolSetHandler):
         }
     )
     async def update_note(self, filepath: str, content: str, commit_message: str = "Update note") -> str:
-        full_path = f"{NOTES_PATH}/{filepath}"
+        first_folder = filepath.split("/")[0] if "/" in filepath else filepath
+        if first_folder in EXCLUDED_FOLDERS:
+            return "Access denied: Cannot update notes in specialized folders. Use german_notes, recipes_notes, or computer_science_notes tools instead."
+        
         return await self.call_other_tool(
             "base_notes__update_note",
-            {"repo": NOTES_REPO, "filepath": full_path, "content": content, "commit_message": commit_message}
+            {"repo": NOTES_REPO, "filepath": filepath, "content": content, "commit_message": commit_message}
         )
