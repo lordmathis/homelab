@@ -65,4 +65,4 @@ title_generation:
   provider: "llamactl"
   model: "Gemma-4-E4B"
 
-history_db_path: "./data/agentkit.db"
+history_db_path: "./data/mikoshi.db"

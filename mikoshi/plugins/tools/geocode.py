@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict
 
-from agentkit.tools.toolset_handler import ToolSetHandler, tool
+from mikoshi.tools.toolset_handler import ToolSetHandler, tool
 
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
@@ -33,7 +33,7 @@ class GeocodingTool(ToolSetHandler):
         """Convert a location name to coordinates using geopy"""
         try:
             # Initialize geocoder with proper user agent (required by Nominatim)
-            geolocator = Nominatim(user_agent="agentkit_geocoding_tool")
+            geolocator = Nominatim(user_agent="mikoshi_geocoding_tool")
             
             # Perform geocoding
             location_obj = geolocator.geocode(location, language='en', addressdetails=True)

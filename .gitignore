@@ -8,8 +8,8 @@ nginx/config.yaml
 
 *.bin
 
-agentkit/data/
-agentkit/logs/
-agentkit/uploads/
+mikoshi/data/
+mikoshi/logs/
+mikoshi/uploads/
 
 *.wav

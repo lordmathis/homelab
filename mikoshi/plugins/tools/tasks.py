@@ -17,7 +17,7 @@ import caldav
 from caldav.elements import dav
 from icalendar import Calendar, Todo
 
-from agentkit.tools.toolset_handler import ToolSetHandler, tool
+from mikoshi.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +221,7 @@ class CalDAVTools(ToolSetHandler):
             # Required fields
             todo.add('summary', summary)
             todo.add('dtstamp', datetime.now(timezone.utc))
-            todo.add('uid', f"{datetime.now(timezone.utc).timestamp()}@agentkit")
+            todo.add('uid', f"{datetime.now(timezone.utc).timestamp()}@mikoshi")
             
             # Optional fields
             if description:

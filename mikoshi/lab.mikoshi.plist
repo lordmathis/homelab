@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>lab.agentkit</string>
+    <string>lab.mikoshi</string>
     <key>ProgramArguments</key>
     <array>
         <string>/Users/matus/.local/bin/uv</string>
         <string>run</string>
         <string>python</string>
         <string>-m</string>
-        <string>agentkit.main</string>
+        <string>mikoshi.main</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/matus/homelab/agentkit</string>
+    <string>/Users/matus/homelab/mikoshi</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
@@ -24,8 +24,8 @@
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/Users/matus/Library/Logs/agentkit/agentkit.log</string>
+    <string>/Users/matus/Library/Logs/mikoshi/mikoshi.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/matus/Library/Logs/agentkit/agentkit.error.log</string>
+    <string>/Users/matus/Library/Logs/mikoshi/mikoshi.error.log</string>
 </dict>
 </plist>
