@@ -12,7 +12,7 @@ AVAILABLE_SERVICES = [
     "audio",
     "llamactl",
     "nginx",
-    "logdy",
+    "logview",
     "brew",
     "glances",
     "mikoshi",

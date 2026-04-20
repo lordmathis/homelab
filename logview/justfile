@@ -1,6 +1,6 @@
-# Logdy log viewer
+# Logview (ttyd + tmux + lnav)
 
-PLIST_NAME := "com.logdy.plist"
+PLIST_NAME := "com.logview.plist"
 PLIST_SRC  := justfile_directory() / PLIST_NAME
 PLIST_DST  := env_var("HOME") / "Library/LaunchAgents" / PLIST_NAME
 
@@ -10,18 +10,18 @@ default:
 start:
     #!/usr/bin/env bash
     set -euo pipefail
-    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs/logdy"
+    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs/logview"
     [ -e "{{ PLIST_DST }}" ] && launchctl unload "{{ PLIST_DST }}" 2>/dev/null || true
     ln -sf "{{ PLIST_SRC }}" "{{ PLIST_DST }}"
     launchctl load "{{ PLIST_DST }}"
-    echo "Logdy service started at http://localhost:9011"
+    echo "Logview service started at http://localhost:9011"
 
 stop:
     #!/usr/bin/env bash
     set -euo pipefail
     launchctl unload "{{ PLIST_DST }}" 2>/dev/null || true
     rm -f "{{ PLIST_DST }}"
-    echo "Logdy service stopped"
+    echo "Logview service stopped"
 
-# Restart the logdy service
+# Restart the logview service
 restart: && stop start

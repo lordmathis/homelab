@@ -1,7 +1,9 @@
 # Services
 brew "nginx"
 brew "glances"
-brew "logdy"
+brew "ttyd"
+brew "lnav"
+brew "tmux"
 
 # LLM Tools
 brew "llama.cpp"

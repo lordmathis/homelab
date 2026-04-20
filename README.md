@@ -9,7 +9,7 @@ Local AI services (LLM inference, chat, audio) and infrastructure on Mac Mini M4
 | llamactl | launchd | LLM model management / routing (llama.cpp, MLX, vLLM) |
 | mikoshi | Docker (Colima) | Chat UI with tools and skills |
 | glances | launchd | System monitoring dashboard |
-| logdy | launchd | Log viewer UI |
+| logview | launchd | Log viewer UI (ttyd + tmux + lnav) |
 | audio | launchd | OpenAI-compatible STT + TTS API |
 
 Nginx reverse-proxies all services with optional authentication. Audio is internal only.
@@ -92,12 +92,12 @@ cd glances
 ./stop.sh     # Stop service
 ```
 
-## Logdy
+## Logview
 
-Web-based log viewer using [Logdy](https://logdy.dev). Follows logs from all services (llamactl, audio, glances, mikoshi) on port 9011.
+Web-based log viewer using ttyd + tmux + lnav. Each service gets its own tmux window with lnav following logs. Accessible on port 9011.
 
 ```sh
-cd logdy
+cd logview
 ./start.sh    # Start service
 ./stop.sh     # Stop service
 ```

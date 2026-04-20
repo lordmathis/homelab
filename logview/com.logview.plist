@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.logview</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/ttyd</string>
+        <string>-p</string>
+        <string>9011</string>
+        <string>-W</string>
+        <string>/Users/matus/homelab/logview/logview.sh</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/matus/Library/Logs/logview/logview.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/matus/Library/Logs/logview/logview.error.log</string>
+</dict>
+</plist>
