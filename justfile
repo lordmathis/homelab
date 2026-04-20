@@ -15,9 +15,9 @@ llamactl *ARGS:
 nginx *ARGS:
     just -f nginx/justfile {{ ARGS }}
 
-# Logdy log viewer
-logdy *ARGS:
-    just -f logdy/justfile {{ ARGS }}
+# Logview log viewer (ttyd + tmux + lnav)
+logview *ARGS:
+    just -f logview/justfile {{ ARGS }}
 
 # Homebrew commands and services
 brew *ARGS:
