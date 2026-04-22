@@ -34,3 +34,7 @@ mikoshi *ARGS:
 # Qdrant vector database
 qdrant *ARGS:
     just -f qdrant/justfile {{ ARGS }}
+
+# Code-server (VS Code in the browser)
+code-server *ARGS:
+    just -f code-server/justfile {{ ARGS }}
