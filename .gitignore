@@ -13,3 +13,6 @@ mikoshi/logs/
 mikoshi/uploads/
 
 *.wav
+
+code-server/projects
+code-server/share

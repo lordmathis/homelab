@@ -1,0 +1,15 @@
+services:
+  code-server:
+    build: .
+    container_name: code-server
+    hostname: code-server
+    restart: unless-stopped
+    ports:
+      - "9003:8080"
+    volumes:
+      - ./config.yaml:/home/coder/.config/code-server/config.yaml
+      - ./projects:/home/coder/projects
+      - ./share:/home/coder/.local/share
+    environment:
+      - DOCKER_USER=${USER}
+    user: "${UID}:${GID}"
