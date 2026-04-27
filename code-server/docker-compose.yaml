@@ -10,6 +10,7 @@ services:
       - ./config.yaml:/home/coder/.config/code-server/config.yaml
       - ./projects:/home/coder/projects
       - ./share:/home/coder/.local/share
+      - ./ssh:/home/coder/.ssh
     environment:
       - DOCKER_USER=${USER}
     user: "${UID}:${GID}"
