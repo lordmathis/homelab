@@ -17,7 +17,8 @@ correct naming convention and format.
 
 Call `web_tools__fetch_page` with the provided URL. Extract:
 - **Recipe title** — used for both the note filename and the `# Heading`
-- **Ingredients** — full list, preserving quantities and units
+- **Ingredients** — full list, preserving quantities and units (separate spices into their own sub-list)
+- **Spices** — listed under a `### Spices` sub-heading within Ingredients
 - **Instructions** — numbered steps, preserving all detail
 
 Ignore ads, comments, author bios, nutrition info, and any other surrounding content.
@@ -52,6 +53,12 @@ Call `recipes_notes__list_notes` and check if a note with that name already exis
 - [ingredient 2]
 ...
 
+### Spices
+
+- [spice 1]
+- [spice 2]
+...
+
 ## Instructions
 
 1. [Step 1]
@@ -61,6 +68,7 @@ Call `recipes_notes__list_notes` and check if a note with that name already exis
 
 Rules:
 - Ingredients as a bullet list (`-`), one per line
+- Spices as a bullet list under a `### Spices` sub-heading within Ingredients
 - Instructions as a numbered list, one step per line
 - Preserve original quantities, units, and phrasing — do not paraphrase or simplify
 - No extra sections (no nutrition, tips, notes, author info) unless the user explicitly asks
