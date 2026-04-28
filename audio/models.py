@@ -33,6 +33,14 @@ class ModelManager(ABC):
         self._last_used = time.monotonic()
         return self._model
 
+    def _unload_model(self):
+        """Release the model and free MLX memory."""
+        if self._model is not None:
+            del self._model
+            self._model = None
+            mx.synchronize()
+            mx.clear_cache()
+
     async def _check_inactivity(self):
         """Periodically check for inactivity and unload model if idle too long."""
         while not self._shutdown:
@@ -40,7 +48,7 @@ class ModelManager(ABC):
             if self._model is not None:
                 idle_time = time.monotonic() - self._last_used
                 if idle_time >= UNLOAD_TIMEOUT_SECONDS:
-                    self._model = None
+                    self._unload_model()
                     self._checker_task = None
                     return
 
@@ -48,6 +56,7 @@ class ModelManager(ABC):
         self._shutdown = True
         if self._checker_task is not None:
             self._checker_task.cancel()
+        self._unload_model()
 
 
 class STTModelManager(ModelManager):
