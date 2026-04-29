@@ -22,6 +22,8 @@
     <dict>
         <key>PATH</key>
         <string>/usr/bin:/bin:/usr/sbin:/sbin:/Users/matus/bin:/Users/matus/homelab/llamactl/.venv/bin:/opt/homebrew/bin</string>
+        <key>LLAMACTL_CONFIG_PATH</key>
+        <string>/Users/matus/homelab/llamactl/config.yaml</string>
     </dict>
 </dict>
 </plist>
