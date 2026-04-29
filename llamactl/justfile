@@ -3,22 +3,9 @@
 PLIST_NAME := "com.llamactl.plist"
 PLIST_SRC  := justfile_directory() / PLIST_NAME
 PLIST_DST  := env_var("HOME") / "Library/LaunchAgents" / PLIST_NAME
-CONFIG_DIR := env_var("HOME") / "Library/Application Support/llamactl"
 
 default:
     @just --list --unsorted
-
-setup:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ ! -f "{{ justfile_directory() }}/.env" ]; then
-        echo "Error: .env file not found at {{ justfile_directory() }}/.env"
-        exit 1
-    fi
-    mkdir -p "{{ CONFIG_DIR }}"
-    export $(grep -v '^#' "{{ justfile_directory() }}/.env" | xargs) && \
-        envsubst < "{{ justfile_directory() }}/config.template.yaml" > "{{ CONFIG_DIR }}/config.yaml"
-    echo "Config generated at: {{ CONFIG_DIR }}/config.yaml"
 
 start:
     #!/usr/bin/env bash
