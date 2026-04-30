@@ -1,12 +1,16 @@
 ---
 required_tool_servers:
-  - computer_science_notes
+  - notes
 ---
 
 # @cs_notes Note Taker Skill
 
 Distill a concept discussed in conversation into a clean, atomic Markdown note and save it using
-`computer_science_notes__create_note` (or `computer_science_notes__update_note` for overwrites).
+`notes__create_note` (or `notes__update_note` for overwrites).
+
+All CS notes live in the `💻 CompSci` folder of the `Notes` repo. Always
+prefix `filepath` with `💻 CompSci/` (e.g. `filepath="💻 CompSci/attention_mechanism.md"`).
+Use `path="💻 CompSci"` when listing notes.
 
 ---
 
@@ -73,7 +77,7 @@ Examples:
 
 ### 3. Check for existing note
 
-Call `computer_science_notes__list_notes` and check for a name collision.
+Call `notes__list_notes(path="💻 CompSci")` and check for a name collision.
 - If found: ask the user whether to overwrite or save under a different name
 - If not found: proceed
 
@@ -90,15 +94,15 @@ Omit: tangents, motivating examples not core to the concept, anything the user s
 ### 5. Show the note to the user first
 
 Before saving, display the formatted note in the chat and ask for confirmation or corrections.  
-Only call `computer_science_notes__create_note` after the user approves (explicit "looks good", "save it", "yes", etc.).
+Only call `notes__create_note` after the user approves (explicit "looks good", "save it", "yes", etc.).
 
 ### 6. Save
 
-Call `computer_science_notes__create_note` with:
-- `name`: derived filename
+Call `notes__create_note` with:
+- `filepath`: `💻 CompSci/{derived_filename}`
 - `content`: approved markdown content
 
-For overwrites, use `computer_science_notes__update_note`.
+For overwrites, use `notes__update_note`.
 
 ### 7. Confirm
 
@@ -109,7 +113,7 @@ Single line confirmation: e.g. `Saved as \`attention_mechanism.md\`.`
 ## Edge Cases
 
 - **Concept not fully discussed** — write what was covered, mark gaps with `<!-- TODO: expand -->` comments, tell the user
-- **User wants to add to an existing note** — fetch it with `computer_science_notes__get_note`, merge content, use `update_note`
+- **User wants to add to an existing note** — fetch it with `notes__get_note`, merge content, use `notes__update_note`
 - **Multiple concepts** — produce each note separately, confirm and save one at a time unless user says to save all
 
 ---
@@ -125,5 +129,5 @@ Single line confirmation: e.g. `Saved as \`attention_mechanism.md\`.`
 4. Draft note with frontmatter, definition, math for attention scores, wiki links to `[[transformer_network]]`, `[[self_attention]]`
 5. Display draft in chat, ask for confirmation
 6. User: "looks good"
-7. Call `computer_science_notes__create_note`
+7. Call `notes__create_note`
 8. Reply: `Saved as \`attention_mechanism.md\`.`

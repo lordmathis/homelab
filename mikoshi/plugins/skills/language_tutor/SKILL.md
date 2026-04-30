@@ -1,7 +1,7 @@
 ---
 required_tool_servers:
   - anki
-  - german_notes
+  - notes
   - dictionary
 ---
 
@@ -129,7 +129,7 @@ NEVER pretend you created a card. You MUST call `anki__add_card` to persist the 
 ## Workflow: Answering a Question
 
 1. **Look up** the relevant word(s) with `dictionary__lookup_word`.
-2. **Check existing notes** — call `german_notes__list_notes`, then read any that cover the topic with `german_notes__get_note`.
+2. **Check existing notes** — call `notes__list_notes(path="🥨 German")`, then read any that cover the topic with `notes__get_note(filepath="🥨 German/{filename}")`.
 3. **Answer** using dictionary data and note content as sources.
 4. **Offer to create or update a note** if the topic isn't covered yet or the existing note is incomplete.
 
@@ -137,12 +137,12 @@ NEVER pretend you created a card. You MUST call `anki__add_card` to persist the 
 
 ## Workflow: Creating or Updating a Note
 
-1. **List existing notes** with `german_notes__list_notes` to check whether a note on this topic already exists.
+1. **List existing notes** with `notes__list_notes(path="🥨 German")` to check whether a note on this topic already exists.
 2. **Look up key words** with `dictionary__lookup_word` before writing. Verify German spellings, meanings, and usage for every significant word or phrase. Do not skip this step.
-3. **Read related notes** with `german_notes__get_note` for any topic you plan to wikilink to, so links are accurate and the new note does not duplicate existing content.
+3. **Read related notes** with `notes__get_note(filepath="🥨 German/{filename}")` for any topic you plan to wikilink to, so links are accurate and the new note does not duplicate existing content.
 4. **Draft the note** following the format above, including frontmatter with the appropriate tag.
 5. **Determine the filename:** lowercase topic name with underscores for spaces (e.g. `trennbare_verben.md`).
-6. **Create or update** with `german_notes__create_note`.
+6. **Create or update** with `notes__create_note(filepath="🥨 German/{filename}", content=...)`.
 7. **Offer to add an Anki card** for a key example sentence from the note. This is optional — ask the user if they'd like one.
 
 ---

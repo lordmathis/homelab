@@ -1,7 +1,7 @@
 ---
 required_tool_servers:
   - web_tools
-  - recipes_notes
+  - notes
 ---
 
 # @recipes — Recipe Saver
@@ -38,7 +38,7 @@ Examples:
 
 ### 3. Check for existing note
 
-Call `recipes_notes__list_notes` and check if a note with that name already exists.
+Call `notes__list_notes(path="🧑‍🍳 Recipes")` and check if a note with that name already exists.
 - If it exists: ask the user whether to overwrite or save under a different name before proceeding.
 - If it doesn't exist: proceed directly.
 
@@ -75,11 +75,11 @@ Rules:
 
 ### 5. Save the note
 
-Call `recipes_notes__create_note` with:
-- `name`: the derived filename (e.g. `creamy_tuscan_chicken.md`)
+Call `notes__create_note` with:
+- `filepath`: `🧑‍🍳 Recipes/{derived_filename}` (e.g. `🧑‍🍳 Recipes/creamy_tuscan_chicken.md`)
 - `content`: the formatted markdown
 
-If overwriting an existing note, use `recipes_notes__update_note` instead.
+If overwriting an existing note, use `notes__update_note` instead.
 
 ### 6. Confirm
 
@@ -106,5 +106,5 @@ Tell the user the recipe was saved, including the note name. Example:
 2. Extract title "Spicy Miso Ramen", ingredients, and instructions
 3. Derive filename: `spicy_miso_ramen.md`
 4. Check notes — not found
-5. Format and call `recipes_notes__create_note`
+5. Format and call `notes__create_note`
 6. Reply: "Saved as `spicy_miso_ramen.md`."

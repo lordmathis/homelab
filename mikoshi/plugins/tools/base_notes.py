@@ -6,13 +6,13 @@ from mikoshi.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
 
-GITEA_SERVER = "gitea"
 REPO_OWNER = "Mathis"
+NOTES_REPO = "Notes"
 DEFAULT_BRANCH = "main"
 
 
 class GiteaNotes(ToolSetHandler):
-    server_name = "base_notes"
+    server_name = "notes"
 
     def __init__(self):
         super().__init__()
@@ -37,14 +37,10 @@ class GiteaNotes(ToolSetHandler):
         return lines
 
     @tool(
-        description="List notes in a Gitea repository as a file tree",
+        description="List notes as a file tree",
         parameters={
             "type": "object",
             "properties": {
-                "repo": {
-                    "type": "string",
-                    "description": "Name of the Gitea repository"
-                },
                 "path": {
                     "type": "string",
                     "description": "Optional subdirectory path to list",
@@ -56,13 +52,12 @@ class GiteaNotes(ToolSetHandler):
                     "items": {"type": "string"},
                     "default": []
                 }
-            },
-            "required": ["repo"]
+            }
         }
     )
-    async def list_notes(self, repo: str, path: str = "", excluded_folders: list = None) -> str:
+    async def list_notes(self, path: str = "", excluded_folders: list = None) -> str:
         try:
-            logger.debug(f"Listing notes for repo='{repo}' path='{path}' excluded={excluded_folders}")
+            logger.debug(f"Listing notes for path='{path}' excluded={excluded_folders}")
 
             excluded_set = set(excluded_folders) if excluded_folders else None
 
@@ -70,7 +65,7 @@ class GiteaNotes(ToolSetHandler):
                 "gitea__get_dir_contents",
                 {
                     "owner": REPO_OWNER,
-                    "repo": repo,
+                    "repo": NOTES_REPO,
                     "filePath": path,
                     "ref": DEFAULT_BRANCH
                 }
@@ -89,31 +84,27 @@ class GiteaNotes(ToolSetHandler):
             return f"Error listing notes: {str(e)}"
 
     @tool(
-        description="Get the content of a specific note from a Gitea repository",
+        description="Get the content of a specific note",
         parameters={
             "type": "object",
             "properties": {
-                "repo": {
-                    "type": "string",
-                    "description": "Name of the Gitea repository"
-                },
                 "filepath": {
                     "type": "string",
                     "description": "Path to the note file"
                 }
             },
-            "required": ["repo", "filepath"]
+            "required": ["filepath"]
         }
     )
-    async def get_note(self, repo: str, filepath: str) -> str:
+    async def get_note(self, filepath: str) -> str:
         try:
-            logger.debug(f"Getting note: repo='{repo}' filepath='{filepath}'")
+            logger.debug(f"Getting note: filepath='{filepath}'")
 
             result = await self.call_other_tool(
                 "gitea__get_file_contents",
                 {
                     "owner": REPO_OWNER,
-                    "repo": repo,
+                    "repo": NOTES_REPO,
                     "filePath": filepath,
                     "ref": DEFAULT_BRANCH
                 }
@@ -134,14 +125,10 @@ class GiteaNotes(ToolSetHandler):
             return f"Error getting note: {str(e)}"
 
     @tool(
-        description="Create a new note with specified content in a Gitea repository",
+        description="Create a new note with specified content",
         parameters={
             "type": "object",
             "properties": {
-                "repo": {
-                    "type": "string",
-                    "description": "Name of the Gitea repository"
-                },
                 "filepath": {
                     "type": "string",
                     "description": "Path where the note should be created"
@@ -156,16 +143,16 @@ class GiteaNotes(ToolSetHandler):
                     "default": "Create note"
                 }
             },
-            "required": ["repo", "filepath", "content"]
+            "required": ["filepath", "content"]
         }
     )
-    async def create_note(self, repo: str, filepath: str, content: str, commit_message: str = "Create note") -> str:
+    async def create_note(self, filepath: str, content: str, commit_message: str = "Create note") -> str:
         try:
             await self.call_other_tool(
                 "gitea__create_or_update_file",
                 {
                     "owner": REPO_OWNER,
-                    "repo": repo,
+                    "repo": NOTES_REPO,
                     "filePath": filepath,
                     "content": content,
                     "message": commit_message,
@@ -180,14 +167,10 @@ class GiteaNotes(ToolSetHandler):
             return f"Error creating note: {str(e)}"
 
     @tool(
-        description="Update an existing note with new content in a Gitea repository",
+        description="Update an existing note with new content",
         parameters={
             "type": "object",
             "properties": {
-                "repo": {
-                    "type": "string",
-                    "description": "Name of the Gitea repository"
-                },
                 "filepath": {
                     "type": "string",
                     "description": "Path to the note file to update"
@@ -202,18 +185,18 @@ class GiteaNotes(ToolSetHandler):
                     "default": "Update note"
                 }
             },
-            "required": ["repo", "filepath", "content"]
+            "required": ["filepath", "content"]
         }
     )
-    async def update_note(self, repo: str, filepath: str, content: str, commit_message: str = "Update note") -> str:
+    async def update_note(self, filepath: str, content: str, commit_message: str = "Update note") -> str:
         try:
-            logger.debug(f"Updating note: repo='{repo}' filepath='{filepath}'")
+            logger.debug(f"Updating note: filepath='{filepath}'")
 
             await self.call_other_tool(
                 "gitea__create_or_update_file",
                 {
                     "owner": REPO_OWNER,
-                    "repo": repo,
+                    "repo": NOTES_REPO,
                     "filePath": filepath,
                     "content": content,
                     "message": commit_message,
