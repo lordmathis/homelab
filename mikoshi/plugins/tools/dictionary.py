@@ -1,5 +1,6 @@
 import logging
 
+from mikoshi.tools.context import ToolCallContext
 from mikoshi.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ class DictionaryTool(ToolSetHandler):
             "required": ["word"]
         }
     )
-    async def lookup_word(self, word: str) -> str:
+    async def lookup_word(self, word: str, context: ToolCallContext = None) -> str:
         url = f"{DWDS_BASE_URL}/{word}"
         logger.info(f"Looking up German word '{word}' at {url}")
-        return await self.call_other_tool("web_tools__fetch_page", {"url": url, "include_links": False})
+        return await self.call_other_tool("web_tools__fetch_page", {"url": url, "include_links": False}, context)

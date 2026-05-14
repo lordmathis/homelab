@@ -2,6 +2,7 @@ from typing import Dict, List
 import logging
 import base64
 
+from mikoshi.tools.context import ToolCallContext
 from mikoshi.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
@@ -55,7 +56,7 @@ class GiteaNotes(ToolSetHandler):
             }
         }
     )
-    async def list_notes(self, path: str = "", excluded_folders: list = None) -> str:
+    async def list_notes(self, path: str = "", excluded_folders: list = None, context: ToolCallContext = None) -> str:
         try:
             logger.debug(f"Listing notes for path='{path}' excluded={excluded_folders}")
 
@@ -68,7 +69,8 @@ class GiteaNotes(ToolSetHandler):
                     "repo": NOTES_REPO,
                     "filePath": path,
                     "ref": DEFAULT_BRANCH
-                }
+                },
+                context
             )
 
             if not result:
@@ -96,7 +98,7 @@ class GiteaNotes(ToolSetHandler):
             "required": ["filepath"]
         }
     )
-    async def get_note(self, filepath: str) -> str:
+    async def get_note(self, filepath: str, context: ToolCallContext = None) -> str:
         try:
             logger.debug(f"Getting note: filepath='{filepath}'")
 
@@ -107,7 +109,8 @@ class GiteaNotes(ToolSetHandler):
                     "repo": NOTES_REPO,
                     "filePath": filepath,
                     "ref": DEFAULT_BRANCH
-                }
+                },
+                context
             )
 
             if not result:
@@ -146,7 +149,7 @@ class GiteaNotes(ToolSetHandler):
             "required": ["filepath", "content"]
         }
     )
-    async def create_note(self, filepath: str, content: str, commit_message: str = "Create note") -> str:
+    async def create_note(self, filepath: str, content: str, commit_message: str = "Create note", context: ToolCallContext = None) -> str:
         try:
             await self.call_other_tool(
                 "gitea__create_or_update_file",
@@ -157,7 +160,8 @@ class GiteaNotes(ToolSetHandler):
                     "content": content,
                     "message": commit_message,
                     "branch_name": DEFAULT_BRANCH
-                }
+                },
+                context
             )
 
             return f"Successfully created note: {filepath}"
@@ -188,7 +192,7 @@ class GiteaNotes(ToolSetHandler):
             "required": ["filepath", "content"]
         }
     )
-    async def update_note(self, filepath: str, content: str, commit_message: str = "Update note") -> str:
+    async def update_note(self, filepath: str, content: str, commit_message: str = "Update note", context: ToolCallContext = None) -> str:
         try:
             logger.debug(f"Updating note: filepath='{filepath}'")
 
@@ -201,7 +205,8 @@ class GiteaNotes(ToolSetHandler):
                     "content": content,
                     "message": commit_message,
                     "branch_name": DEFAULT_BRANCH
-                }
+                },
+                context
             )
 
             return f"Successfully updated note: {filepath}"
