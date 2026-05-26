@@ -3,6 +3,7 @@
 
 __pycache__/
 .venv/
+*.egg-info/
 
 nginx/config.yaml
 
@@ -17,3 +18,5 @@ mikoshi/uploads/
 code-server/projects
 code-server/share
 code-server/ssh
+
+*.eim

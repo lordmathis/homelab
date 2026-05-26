@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reachy-voice-assistant"
+version = "0.1.0"
+description = "Voice-driven agent for Reachy Mini robot"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "reachy-mini>=1.7.3",
+    "edge-impulse-linux>=1.2.1",
+    "numpy>=2.2.6",
+    "pyaudio>=0.2.14",
+    "six>=1.17.0",
+    "opencv-python>=4.13.0.92",
+]
+
+[tool.setuptools]
+package-dir = { "" = "." }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
