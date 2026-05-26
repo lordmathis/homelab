@@ -23,3 +23,13 @@ brew "wget"
 brew "bat"
 brew "ffmpeg"
 brew "just"
+brew "git-lfs"
+
+# Libs
+brew "cmake"
+brew "cairo"
+brew "gstreamer"
+brew "gst-plugins-base"
+brew "gst-plugins-bad"
+brew "gst-plugins-good"
+brew "portaudio"
