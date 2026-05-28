@@ -1,9 +1,11 @@
 import threading
 import time
 
+import numpy as np
 from reachy_mini import ReachyMini, ReachyMiniApp
 
 from voice_assistant.expressions import ExpressionRunner
+from voice_assistant.stt import transcribe
 from voice_assistant.wake_word import WakeWordDetector
 from voice_assistant.vad import VoiceActivityDetector
 
@@ -70,6 +72,7 @@ class VoiceAssistantApp(ReachyMiniApp):
                     conversation_timeout=9999.0,
                     min_speech_duration=0.3,
                 )
+                audio_buffer: list[np.ndarray] = []
 
                 while not self._stop_event.is_set():
                     if time.time() - last_speech_time > conversation_timeout:
@@ -88,9 +91,19 @@ class VoiceAssistantApp(ReachyMiniApp):
                     if result["is_speech"]:
                         last_speech_time = time.time()
 
+                    if result["is_speech"] or result["speech_duration"] > 0:
+                        audio_buffer.append(sample)
+
                     if result["end_of_utterance"]:
                         print(f"[conversation] End of utterance (speech: {result['speech_duration']:.1f}s)")
                         last_speech_time = time.time()
+                        if audio_buffer:
+                            audio_data = np.concatenate(audio_buffer)
+                            try:
+                                text = transcribe(audio_data)
+                                print(f"[stt] Transcription: {text!r}")
+                            except Exception as e:
+                                print(f"[stt] ERROR: {e}")
                         break
 
                 print("[conversation] Listening again...")
