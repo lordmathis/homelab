@@ -2,8 +2,8 @@ import threading
 import time
 
 from reachy_mini import ReachyMini, ReachyMiniApp
-from reachy_mini.utils import create_head_pose
 
+from voice_assistant.expressions import ExpressionRunner
 from voice_assistant.wake_word import WakeWordDetector
 from voice_assistant.vad import VoiceActivityDetector
 
@@ -16,13 +16,19 @@ class VoiceAssistantApp(ReachyMiniApp):
         super().__init__()
         self._wake_word = None
         self._reachy = None
+        self._expression_runner = None
         self._conversation_thread = None
         self._stop_event = threading.Event()
 
     def run(self, reachy_mini: ReachyMini, stop_event: threading.Event):
-        print("[main] run() called, starting wake word detector...")
+        print("[main] run() called, initializing robot...")
         self._reachy = reachy_mini
         self._stop_event = stop_event
+        self._expression_runner = ExpressionRunner(reachy_mini)
+
+        reachy_mini.enable_motors()
+        reachy_mini.wake_up()
+        print("[main] Robot awake, starting wake word detector...")
 
         self._wake_word = WakeWordDetector(
             reachy_mini,
@@ -30,7 +36,7 @@ class VoiceAssistantApp(ReachyMiniApp):
             threshold=0.7,
         )
         self._wake_word.start()
-        print("[main] Wake word detector started, say 'Hey Reachy!'")
+        print("[main] Say 'Hey Reachy!'")
 
         while not stop_event.is_set():
             time.sleep(0.1)
@@ -48,47 +54,43 @@ class VoiceAssistantApp(ReachyMiniApp):
         self._conversation_thread.start()
 
     def _run_conversation(self):
-        self._reachy.goto_target(
-            head=create_head_pose(z=10, mm=True),
-            antennas=[0.3, -0.3],
-            duration=0.5,
-        )
-        print("[conversation] Listening...")
+        try:
+            self._reachy.media.play_sound("wake_up.wav")
+            self._expression_runner.play("greet")
+            print("[conversation] Listening...")
 
-        last_speech_time = time.time()
-        conversation_timeout = 10.0
-
-        while not self._stop_event.is_set():
-            vad = VoiceActivityDetector(
-                energy_threshold=0.02,
-                end_of_utterance_silence=1.5,
-                conversation_timeout=9999.0,
-                min_speech_duration=0.3,
-            )
+            last_speech_time = time.time()
+            conversation_timeout = 10.0
 
             while not self._stop_event.is_set():
-                if time.time() - last_speech_time > conversation_timeout:
-                    print("[conversation] No speech for 10s, ending conversation")
-                    self._reachy.goto_target(
-                        head=create_head_pose(),
-                        antennas=[0, 0],
-                        duration=0.5,
-                    )
-                    return
+                vad = VoiceActivityDetector(
+                    energy_threshold=0.02,
+                    end_of_utterance_silence=1.5,
+                    conversation_timeout=9999.0,
+                    min_speech_duration=0.3,
+                )
 
-                sample = self._reachy.media.get_audio_sample()
-                if sample is None:
-                    time.sleep(0.01)
-                    continue
+                while not self._stop_event.is_set():
+                    if time.time() - last_speech_time > conversation_timeout:
+                        print("[conversation] No speech for 10s, ending conversation")
+                        self._expression_runner.play("reset")
+                        return
 
-                result = vad.process_frame(sample)
+                    sample = self._reachy.media.get_audio_sample()
+                    if sample is None:
+                        time.sleep(0.01)
+                        continue
 
-                if result["end_of_utterance"]:
-                    print(f"[conversation] End of utterance (speech: {result['speech_duration']:.1f}s)")
-                    last_speech_time = time.time()
-                    break
+                    result = vad.process_frame(sample)
 
-            print("[conversation] Listening again...")
+                    if result["end_of_utterance"]:
+                        print(f"[conversation] End of utterance (speech: {result['speech_duration']:.1f}s)")
+                        last_speech_time = time.time()
+                        break
+
+                print("[conversation] Listening again...")
+        except Exception as e:
+            print(f"[conversation] ERROR: {e}")
 
     def stop(self):
         if self._wake_word:
