@@ -24,7 +24,11 @@ class WakeWordDetector:
 
     def stop(self):
         self._stop_event.set()
-        if self._thread and self._thread.is_alive():
+        if (
+            self._thread
+            and self._thread.is_alive()
+            and self._thread is not threading.current_thread()
+        ):
             self._thread.join(timeout=2.0)
 
     def _run(self):
