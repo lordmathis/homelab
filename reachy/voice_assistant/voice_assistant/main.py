@@ -48,6 +48,7 @@ class VoiceAssistantApp(ReachyMiniApp):
             print("[main] Already in conversation, ignoring wake word")
             return
 
+        self._wake_word.stop()
         self._conversation_thread = threading.Thread(
             target=self._run_conversation, daemon=True
         )
@@ -74,6 +75,7 @@ class VoiceAssistantApp(ReachyMiniApp):
                     if time.time() - last_speech_time > conversation_timeout:
                         print("[conversation] No speech for 10s, ending conversation")
                         self._expression_runner.play("reset")
+                        self._wake_word.start()
                         return
 
                     sample = self._reachy.media.get_audio_sample()
@@ -83,6 +85,9 @@ class VoiceAssistantApp(ReachyMiniApp):
 
                     result = vad.process_frame(sample)
 
+                    if result["is_speech"]:
+                        last_speech_time = time.time()
+
                     if result["end_of_utterance"]:
                         print(f"[conversation] End of utterance (speech: {result['speech_duration']:.1f}s)")
                         last_speech_time = time.time()
@@ -91,6 +96,7 @@ class VoiceAssistantApp(ReachyMiniApp):
                 print("[conversation] Listening again...")
         except Exception as e:
             print(f"[conversation] ERROR: {e}")
+            self._wake_word.start()
 
     def stop(self):
         if self._wake_word:
