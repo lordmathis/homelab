@@ -4,9 +4,9 @@ required_tool_servers:
   - notes
 ---
 
-# @recipes — Recipe Saver
+# Recipe Saver
 
-Fetche a recipe from a URL, extract the structured content, and save it as a note using the
+Fetch a recipe from a URL, extract the structured content, and save it as a note using the
 correct naming convention and format.
 
 ---
