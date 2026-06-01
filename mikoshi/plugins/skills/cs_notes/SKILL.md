@@ -3,7 +3,7 @@ required_tool_servers:
   - notes
 ---
 
-# @cs_notes Note Taker Skill
+# Note Taker Skill
 
 Distill a concept discussed in conversation into a clean, atomic Markdown note and save it using
 `notes__create_note` (or `notes__update_note` for overwrites).
