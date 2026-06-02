@@ -4,8 +4,8 @@ requires-python = ">=3.13"
 
 [[package]]
 name = "agents"
-version = "39"
-source = { url = "https://github.com/lordmathis/mikoshi/releases/download/v39/agents-39-py3-none-any.whl" }
+version = "40"
+source = { url = "https://github.com/lordmathis/mikoshi/releases/download/v40/agents-40-py3-none-any.whl" }
 dependencies = [
     { name = "anthropic" },
     { name = "beautifulsoup4" },
@@ -25,7 +25,7 @@ dependencies = [
     { name = "sqlalchemy" },
 ]
 wheels = [
-    { url = "https://github.com/lordmathis/mikoshi/releases/download/v39/agents-39-py3-none-any.whl", hash = "sha256:2e3b1bcc1f0a45c3a77b0f3a14e47a7569f44007243f4144a3c77b8152718fe7" },
+    { url = "https://github.com/lordmathis/mikoshi/releases/download/v40/agents-40-py3-none-any.whl", hash = "sha256:6a2b998d9c4f9d4a52f941e0d4ee56363a0bc77fe6ee16f956f3f720caf73295" },
 ]
 
 [package.metadata]
@@ -1025,7 +1025,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agents", url = "https://github.com/lordmathis/mikoshi/releases/download/v39/agents-39-py3-none-any.whl" },
+    { name = "agents", url = "https://github.com/lordmathis/mikoshi/releases/download/v40/agents-40-py3-none-any.whl" },
     { name = "aiohttp", specifier = ">=3.13.4" },
     { name = "caldav", specifier = ">=3.1.0" },
     { name = "geopy", specifier = ">=2.4.1" },
