@@ -1,0 +1,23 @@
+# SearXNG meta search engine
+
+default:
+    @just --list --unsorted
+
+start:
+    docker-compose up -d
+
+stop:
+    docker-compose down
+
+restart:
+    docker-compose restart
+
+# Pull the latest images and recreate containers
+update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker-compose pull
+    docker-compose up -d
+
+logs:
+    docker-compose logs -f core

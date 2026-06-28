@@ -21,7 +21,7 @@ generate:
 restart:
     #!/usr/bin/env bash
     set -euo pipefail
-    brew service restart nginx
+    brew services restart nginx
 
 check:
     #!/usr/bin/env bash

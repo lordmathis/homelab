@@ -38,3 +38,7 @@ qdrant *ARGS:
 # Code-server (VS Code in the browser)
 code-server *ARGS:
     just -f code-server/justfile {{ ARGS }}
+
+# SearXNG meta search engine
+searxng *ARGS:
+    just -f searxng/justfile {{ ARGS }}

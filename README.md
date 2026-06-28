@@ -11,6 +11,7 @@ Local AI services (LLM inference, chat, audio) and infrastructure on Mac Mini M4
 | glances | launchd | System monitoring dashboard |
 | logview | launchd | Log viewer UI (ttyd + tmux + lnav) |
 | audio | launchd | OpenAI-compatible STT + TTS API |
+| searxng | Docker (Colima) | Private meta search engine (SearXNG) |
 
 Nginx reverse-proxies all services with optional authentication. Audio is internal only.
 
@@ -56,8 +57,20 @@ plugins/
 
 Mikoshi connects to the audio service via `host.docker.internal:9100`.
 
-## Audio Service
+## SearXNG
 
+Private [SearXNG](https://github.com/searxng/searxng) meta search engine, deployed via Docker (Colima) with a Valkey cache. JSON output is enabled so it can be used as a search backend by tools.
+
+```sh
+just searxng start    # Start service
+just searxng stop     # Stop service
+just searxng update   # Pull latest images and recreate
+just searxng logs     # Follow logs
+```
+
+JSON search API: `GET http://127.0.0.1:9004/search?q=<query>&format=json`
+
+## Audio Service
 OpenAI-compatible audio API using [mlx-audio](https://github.com/Blaizzy/mlx-audio). Models are lazy-loaded and auto-unloaded after 60 minutes of inactivity.
 
 | Endpoint | Method | Description |
