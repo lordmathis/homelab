@@ -4,37 +4,43 @@ Local AI services (LLM inference, chat, audio) and infrastructure on Mac Mini M4
 
 ## Services
 
-| Service | Runtime | Purpose |
-|---------|---------|---------|
-| llamactl | launchd | LLM model management / routing (llama.cpp, MLX, vLLM) |
-| mikoshi | Docker (Colima) | Chat UI with tools and skills |
-| glances | launchd | System monitoring dashboard |
-| logview | launchd | Log viewer UI (ttyd + tmux + lnav) |
-| audio | launchd | OpenAI-compatible STT + TTS API |
-| searxng | Docker (Colima) | Private meta search engine (SearXNG) |
+| Service | Runtime | Port | Purpose |
+|---------|---------|------|---------|
+| llamactl | launchd | 9001 | LLM model management / routing (llama.cpp, MLX, vLLM) |
+| mikoshi | launchd | 9002 | Chat UI with tools and skills |
+| code-server | Docker (Colima) | 9003 | VS Code in the browser |
+| searxng | Docker (Colima) | 9004 | Private meta search engine (SearXNG) |
+| glances | launchd | 9010 | System monitoring dashboard |
+| logview | launchd | 9011 | Log viewer UI (ttyd + tmux + lnav) |
+| audio | launchd | 9100 | OpenAI-compatible STT + TTS API |
+| qdrant | launchd | 6333 | Vector database |
 
-Nginx reverse-proxies all services with optional authentication. Audio is internal only.
+Nginx reverse-proxies all services with optional authentication. Audio and qdrant are internal only. All services are managed through [just](https://github.com/casey/just) recipes in the root `justfile`:
+
+```sh
+just <service> start     # start a service
+just <service> stop      # stop a service
+just <service> restart   # restart a service
+```
 
 ## Setup
 
-Install all system dependencies:
+Install system dependencies via Homebrew:
 
 ```sh
-cd homebrew
-brew bundle install
+just brew update         # or: cd homebrew && brew bundle install
 ```
 
-Secrets go in `.env` files (gitignored). Never commit them. Python projects use `uv` with `pyproject.toml`.
+Secrets go in `.env` files (gitignored). Never commit them. Python projects use `uv` with `pyproject.toml`. Service binaries (`llamactl`, `qdrant`, `gitea-mcp`) install to `~/bin` via each service's `update` recipe.
 
 ## Llamactl
 
-[Llamactl](https://github.com/lordmathis/llamactl) provides unified management and routing for llama.cpp, MLX and vLLM models with web dashboard. Config is generated from `config.template.yaml` via `setup.sh` (uses `envsubst`).
+[Llamactl](https://github.com/lordmathis/llamactl) provides unified management and routing for llama.cpp, MLX and vLLM models with a web dashboard. Config lives in `llamactl/config.yaml` (env vars like `${LLAMACTL_MGMT_KEY}` are substituted at runtime).
 
 ```sh
-cd llamactl
-./setup.sh    # Initial setup (generates config from template)
-./start.sh    # Start service
-./stop.sh     # Stop service
+just llamactl update     # Download binary to ~/bin
+just llamactl start      # Start service
+just llamactl stop       # Stop service
 ```
 
 ## Mikoshi
@@ -42,57 +48,73 @@ cd llamactl
 A flexible [chat client](https://github.com/lordmathis/mikoshi) with Web UI that integrates multiple AI providers, tools, and agent frameworks through a unified plugin architecture.
 
 ```sh
-cd mikoshi
-docker compose up -d --build   # Build and start
-docker compose down            # Stop
+just mikoshi start       # Start service
+just mikoshi stop        # Stop service
+just mikoshi restart     # Restart service
 ```
 
-Plugins live in `mikoshi/plugins/` and are volume-mounted into the container:
+Plugins live in `mikoshi/plugins/` and are auto-discovered on startup:
 
 ```
 plugins/
-  tools/<name>/     # Toolset plugin (extends ToolSetHandler, auto-discovered on startup)
-  skills/<name>/    # Agent skill (SKILL.md, auto-discovered on startup)
+  tools/<name>.py   # Toolset plugin (extends ToolSetHandler)
+  agents/<name>.py  # Agent plugin (extends ReActAgentPlugin, etc.)
+  skills/<name>/    # Agent skill (SKILL.md)
 ```
-
-Mikoshi connects to the audio service via `host.docker.internal:9100`.
 
 ## SearXNG
 
-Private [SearXNG](https://github.com/searxng/searxng) meta search engine, deployed via Docker (Colima) with a Valkey cache. JSON output is enabled so it can be used as a search backend by tools.
+Private [SearXNG](https://github.com/searxng/searxng) meta search engine, deployed via Docker (Colima) with a Valkey cache.
 
 ```sh
-just searxng start    # Start service
-just searxng stop     # Stop service
-just searxng update   # Pull latest images and recreate
-just searxng logs     # Follow logs
+just searxng start      # Start service
+just searxng stop       # Stop service
+just searxng update     # Pull latest images and recreate
+just searxng logs       # Follow logs
 ```
 
-JSON search API: `GET http://127.0.0.1:9004/search?q=<query>&format=json`
-
 ## Audio Service
+
 OpenAI-compatible audio API using [mlx-audio](https://github.com/Blaizzy/mlx-audio). Models are lazy-loaded and auto-unloaded after 60 minutes of inactivity.
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/v1/audio/transcriptions` | POST | STT via Whisper (`mlx-community/whisper-large-v3-turbo-asr-fp16`) |
-| `/v1/audio/speech` | POST | TTS via Chatterbox (`mlx-community/chatterbox-fp16`, 23 languages) |
+| `/v1/audio/speech` | POST | TTS via Voxtral (`mlx-community/Voxtral-4B-TTS-2603-mlx-bf16`) |
 
 ```sh
-cd audio
-./start.sh    # Start service
-./stop.sh     # Stop service
+just audio start         # Start service
+just audio stop          # Stop service
 ```
 
-Test scripts: `test_stt.py` (file → transcript) and `test_tts.py` (text/file → WAV, supports `-l` for language).
+## Code-server
+
+[code-server](https://github.com/coder/code-server) running VS Code in the browser, deployed via Docker (Colima).
+
+```sh
+just code-server start   # Build (if needed) and start
+just code-server stop    # Stop
+just code-server restart # Restart
+```
+
+## Qdrant
+
+[Qdrant](https://github.com/qdrant/qdrant) vector database, run as a launchd service using a native Apple Silicon binary.
+
+```sh
+just qdrant update       # Download latest binary to ~/bin
+just qdrant start        # Start service
+just qdrant stop         # Stop service
+```
 
 ## Proxy
 
-Nginx reverse proxy with optional Authelia authentication. Routes are declared in `nginx/config.yaml` and rendered via `nginx/setup.py` (Jinja2 template).
+Nginx reverse proxy with optional Authelia authentication. Routes are declared in `nginx/config.yaml` and rendered via `nginx/generate.py` (Jinja2 template `lab-proxy.conf.j2`).
 
 ```sh
-python nginx/setup.py          # Regenerate config, test, and reload Nginx
-brew services stop nginx       # Stop Nginx
+just nginx generate      # Regenerate config
+just nginx check         # Test config (nginx -t)
+just nginx restart       # Reload Nginx via brew services
 ```
 
 ## Monitoring
@@ -100,17 +122,19 @@ brew services stop nginx       # Stop Nginx
 Real-time system monitoring dashboard using [Glances](https://github.com/nicolargo/glances). Web-based UI for CPU, memory, disk, and network stats.
 
 ```sh
-cd glances
-./start.sh    # Start service
-./stop.sh     # Stop service
+just glances start       # Start service
+just glances stop        # Stop service
 ```
 
 ## Logview
 
-Web-based log viewer using ttyd + tmux + lnav. Each service gets its own tmux window with lnav following logs. Accessible on port 9011.
+Web-based log viewer using ttyd + tmux + lnav. Each service gets its own tmux window with lnav following logs.
 
 ```sh
-cd logview
-./start.sh    # Start service
-./stop.sh     # Stop service
+just logview start       # Start service
+just logview stop        # Stop service
 ```
+
+## Reachy
+
+Voice-driven agent for the Reachy Mini robot. A standalone Python process (`reachy/voice_assistant/`) listens for a wake word, transcribes speech via the audio service, sends it to mikoshi for processing, and speaks the response back. A mikoshi plugin (`reachy`) and tool server expose robot control to the agent.
