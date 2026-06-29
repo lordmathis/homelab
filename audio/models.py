@@ -97,6 +97,10 @@ class TTSModelManager(ModelManager):
 
         audio = mx.concatenate(audio_chunks, axis=0)
 
+        peak = float(mx.max(mx.abs(audio)).item())
+        if peak > 1e-8:
+            audio = mx.clip(audio * (0.95 / peak), -1.0, 1.0)
+
         buffer = io.BytesIO()
         sf.write(buffer, audio, samplerate=model.sample_rate, format="WAV")
         buffer.seek(0)

@@ -1,3 +1,4 @@
+import os
 import threading
 import time
 
@@ -5,9 +6,19 @@ import numpy as np
 from reachy_mini import ReachyMini, ReachyMiniApp
 
 from voice_assistant.expressions import ExpressionRunner
+from voice_assistant.mikoshi_client import MikoshiClient
+from voice_assistant.robot_api import ConversationState, start_robot_api
+from voice_assistant.sounds import ensure_listening_cue
 from voice_assistant.stt import transcribe
+from voice_assistant.tts import synthesize
 from voice_assistant.wake_word import WakeWordDetector
 from voice_assistant.vad import VoiceActivityDetector
+
+
+# Extra wait after the computed TTS duration before listening resumes.
+# Covers GStreamer preroll + scheduling latency so we don't capture the tail
+# of Reachy's own speech (echo) when VAD restarts.
+PLAYBACK_TAIL_S = 0.5
 
 
 class VoiceAssistantApp(ReachyMiniApp):
@@ -16,17 +27,24 @@ class VoiceAssistantApp(ReachyMiniApp):
 
     def __init__(self):
         super().__init__()
+        self.daemon_on_localhost = False
         self._wake_word = None
         self._reachy = None
         self._expression_runner = None
         self._conversation_thread = None
         self._stop_event = threading.Event()
+        self._mikoshi = MikoshiClient()
+        self._state = ConversationState()
+        self._cue_path = ensure_listening_cue()
 
     def run(self, reachy_mini: ReachyMini, stop_event: threading.Event):
         print("[main] run() called, initializing robot...")
         self._reachy = reachy_mini
         self._stop_event = stop_event
         self._expression_runner = ExpressionRunner(reachy_mini)
+        self._state.robot_connected = True
+
+        start_robot_api(reachy_mini, self._expression_runner, self._state)
 
         reachy_mini.enable_motors()
         reachy_mini.wake_up()
@@ -60,7 +78,16 @@ class VoiceAssistantApp(ReachyMiniApp):
         try:
             self._reachy.media.play_sound("wake_up.wav")
             self._expression_runner.play("greet")
-            print("[conversation] Listening...")
+            self._state.current = "listening"
+
+            try:
+                chat_id = self._mikoshi.new_session()
+                print(f"[conversation] mikoshi chat={chat_id} Listening...")
+            except Exception as e:
+                print(f"[mikoshi] ERROR creating chat: {e}")
+                self._state.current = "idle"
+                self._wake_word.start()
+                return
 
             last_speech_time = time.time()
             conversation_timeout = 10.0
@@ -78,6 +105,7 @@ class VoiceAssistantApp(ReachyMiniApp):
                     if time.time() - last_speech_time > conversation_timeout:
                         print("[conversation] No speech for 10s, ending conversation")
                         self._expression_runner.play("reset")
+                        self._state.current = "idle"
                         self._wake_word.start()
                         return
 
@@ -96,19 +124,40 @@ class VoiceAssistantApp(ReachyMiniApp):
 
                     if result["end_of_utterance"]:
                         print(f"[conversation] End of utterance (speech: {result['speech_duration']:.1f}s)")
-                        last_speech_time = time.time()
                         if audio_buffer:
                             audio_data = np.concatenate(audio_buffer)
                             try:
                                 text = transcribe(audio_data)
                                 print(f"[stt] Transcription: {text!r}")
+                                if text:
+                                    self._expression_runner.play("thinking")
+                                    self._state.current = "processing"
+
+                                    def on_message(reply: str):
+                                        print(f"[reachy] {reply}")
+                                        try:
+                                            tts_path, duration = synthesize(reply)
+                                            self._state.current = "responding"
+                                            try:
+                                                self._reachy.media.play_sound(tts_path)
+                                                time.sleep(duration + PLAYBACK_TAIL_S)
+                                            finally:
+                                                os.unlink(tts_path)
+                                        except Exception as e:
+                                            print(f"[tts] ERROR playing message: {e}")
+
+                                    self._mikoshi.send_message(text, on_message=on_message)
+                                    self._reachy.media.play_sound(self._cue_path)
                             except Exception as e:
-                                print(f"[stt] ERROR: {e}")
+                                print(f"[mikoshi] ERROR: {e}")
+                        last_speech_time = time.time()
+                        self._state.current = "listening"
                         break
 
                 print("[conversation] Listening again...")
         except Exception as e:
             print(f"[conversation] ERROR: {e}")
+            self._state.current = "idle"
             self._wake_word.start()
 
     def stop(self):
