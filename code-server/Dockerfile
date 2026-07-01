@@ -16,3 +16,6 @@ RUN curl -fsSL https://opencode.ai/install | bash
 
 # set zsh
 COPY set-zsh.sh /entrypoint.d/
+
+# start opencode serve for the mikoshi bridge
+COPY opencode-serve.sh /entrypoint.d/

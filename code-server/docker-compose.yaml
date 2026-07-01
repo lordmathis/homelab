@@ -6,11 +6,13 @@ services:
     restart: unless-stopped
     ports:
       - "9003:8080"
+      - "127.0.0.1:4096:4096"
     volumes:
       - ./config.yaml:/home/coder/.config/code-server/config.yaml
       - ./projects:/home/coder/projects
       - ./share:/home/coder/.local/share
       - ./ssh:/home/coder/.ssh
+      - ../mikoshi/data/workspaces:/home/coder/workspaces
     environment:
       - DOCKER_USER=${USER}
     user: "${UID}:${GID}"
