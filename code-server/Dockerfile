@@ -1,6 +1,6 @@
 FROM codercom/code-server:latest
 
-RUN sudo apt-get update && sudo apt-get install zsh
+RUN sudo DEBIAN_FRONTEND=noninteractive apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y zsh bat
 
 # uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
