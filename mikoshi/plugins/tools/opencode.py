@@ -29,6 +29,12 @@ from mikoshi.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
 
+# Assistant message finish reasons that mean the model emitted tool calls and
+# the agent loop will continue with another step (i.e. the turn is NOT done).
+# Anything else that is set ("stop", "length", "error", "stopped",
+# "content_filter", ...) means the turn is complete.
+_LOOP_FINISH = {"tool", "tool-calls"}
+
 
 class OpencodeTools(ToolSetHandler):
     """Bridge to a remote ``opencode serve`` instance (v2 API)."""
@@ -180,8 +186,8 @@ class OpencodeTools(ToolSetHandler):
         The v2 API is asynchronous: ``/prompt`` returns as soon as the prompt is
         admitted and there is no blocking wait endpoint, so we poll. A turn may
         span several agent steps (tool calls); each in-flight step's message
-        carries ``finish == "tool"`` while the loop continues, so only a
-        non-``tool`` finish (``stop``/``error``/``stopped``/``length``/...) is
+        carries a tool-call finish (``"tool-calls"``) while the loop continues, so
+        only a non-tool finish (``stop``/``error``/``stopped``/``length``/...) is
         treated as done. Messages are returned newest-first, and only messages
         newer than ``user_created`` (i.e. this turn's) are considered, which
         avoids mistaking a previous turn's reply for the current one.
@@ -208,7 +214,7 @@ class OpencodeTools(ToolSetHandler):
                     break
                 if msg.get("type") == "assistant":
                     finish = msg.get("finish")
-                    if finish is not None and finish != "tool":
+                    if finish is not None and finish not in _LOOP_FINISH:
                         return msg
                     # Newest reply of this turn is still generating (or mid
                     # tool-loop); wait and poll again.
