@@ -1,23 +1,25 @@
 """OpenCode bridge tool server.
 
-Delegates coding work to a remote ``opencode serve`` instance (v2 HTTP API).
+Delegates coding work to a remote ``opencode serve`` instance.
 Each mikoshi workspace is mounted into the opencode container and targeted
 per-session, so one opencode server serves every workspace. A mikoshi chat
 maps 1:1 to an opencode session, persisted on disk at
 ``<data_dir>/tool_storage/opencode/sessions.json``.
 
-Requires opencode with the v2 (``/api/...``) HTTP API and per-request location
-targeting. Configure via environment variables:
-
-- ``OPENCODE_SERVE_URL``        default ``http://localhost:4096``
-- ``OPENCODE_SERVER_PASSWORD``  basic-auth password (username defaults to ``opencode``)
 - ``OPENCODE_WORKSPACES_ROOT``  container path workspaces are mounted at
                                 (default ``/home/coder/workspaces``)
+- ``OPENCODE_PROVIDER_ID``      opencode provider to pin for delegated tasks
+                                (e.g. ``zai-coding-plan``); requires ``OPENCODE_MODEL_ID``
+- ``OPENCODE_MODEL_ID``         model id to pin (e.g. ``glm-5.2``); requires
+                                ``OPENCODE_PROVIDER_ID``. If both are unset, opencode's
+                                server default is used.
 """
 
+import asyncio
 import json
 import logging
 import os
+import time
 from typing import Any, Dict, Optional
 
 import httpx
@@ -35,18 +37,22 @@ class OpencodeTools(ToolSetHandler):
 
     def __init__(self):
         super().__init__()
-        self._base_url = os.getenv("OPENCODE_SERVE_URL", "http://localhost:4096").rstrip("/")
-        self._username = os.getenv("OPENCODE_SERVER_USERNAME", "opencode")
-        self._password = os.getenv("OPENCODE_SERVER_PASSWORD", "")
+        self._base_url = "http://localhost:4096"
+        self._username = "opencode"
+        self._password = ""
         self._workspaces_root = os.getenv(
             "OPENCODE_WORKSPACES_ROOT", "/home/coder/workspaces"
         ).rstrip("/")
+        self._task_timeout = 900.0
+        self._poll_interval = 1.0
+        self._provider_id = os.getenv("OPENCODE_PROVIDER_ID", "")
+        self._model_id = os.getenv("OPENCODE_MODEL_ID", "")
         self._client: Optional[httpx.AsyncClient] = None
 
     async def initialize(self) -> None:
         await super().initialize()
         auth = (self._username, self._password) if self._password else None
-        # No read timeout: `wait` blocks legitimately until the session is idle.
+        # No read timeout: a delegated task can run for many minutes.
         self._client = httpx.AsyncClient(
             base_url=self._base_url,
             auth=auth,
@@ -92,6 +98,8 @@ class OpencodeTools(ToolSetHandler):
             raise RuntimeError("no workspace linked to this chat")
 
         body: Dict[str, Any] = {"location": {"directory": directory}}
+        if self._provider_id and self._model_id:
+            body["model"] = {"providerID": self._provider_id, "id": self._model_id}
         resp = await self._client.post("/api/session", json=body)
         resp.raise_for_status()
         session_id = resp.json()["data"]["id"]
@@ -137,47 +145,94 @@ class OpencodeTools(ToolSetHandler):
             logger.error("opencode session create failed: %s", e, exc_info=True)
             return f"Error: cannot create opencode session ({self._base_url}): {e}"
 
+        # The v2 `/prompt` endpoint admits the prompt and returns immediately; it
+        # does NOT block on the reply, and `/wait` is unavailable on this server
+        # version. `timeCreated` marks this turn so the poller can ignore messages
+        # produced by earlier turns on the same session.
         try:
             resp = await self._client.post(
-                f"/api/session/{session_id}/prompt", json={"prompt": {"text": prompt}}
+                f"/api/session/{session_id}/prompt",
+                json={"prompt": {"text": prompt}},
             )
             resp.raise_for_status()
-            await self._client.post(f"/api/session/{session_id}/wait")
+            prompt_data = (resp.json() or {}).get("data") or {}
         except httpx.HTTPError as e:
-            logger.error("opencode prompt/wait failed: %s", e, exc_info=True)
-            return f"Error: opencode task failed (session {session_id}): {e}."
+            logger.error("opencode prompt rejected: %s", e, exc_info=True)
+            return f"Error: opencode task rejected (session {session_id}): {e}."
 
-        try:
-            resp = await self._client.get(
-                f"/api/session/{session_id}/message",
-                params={"order": "desc", "limit": 20},
-            )
-            resp.raise_for_status()
-        except httpx.HTTPError as e:
-            return f"Error: opencode finished but reading the response failed: {e}"
-
-        return (
-            _extract_assistant_text(resp.json())
-            or "opencode completed but returned no text output."
+        reply = await self._wait_for_completion(
+            session_id, prompt_data.get("timeCreated") or 0
         )
+        if reply is None:
+            return (
+                f"Error: opencode did not finish within {int(self._task_timeout)}s "
+                f"(session {session_id}). The task may still be running in the "
+                f"background; check workspace__git_status shortly."
+            )
+        return _message_text(reply) or "opencode completed but returned no text output."
+
+    async def _wait_for_completion(
+        self, session_id: str, user_created: int
+    ) -> Optional[Dict[str, Any]]:
+        """Poll ``GET /api/session/:id/message`` until the assistant turn that
+        began at ``user_created`` reaches a terminal finish.
+
+        The v2 API is asynchronous: ``/prompt`` returns as soon as the prompt is
+        admitted and there is no blocking wait endpoint, so we poll. A turn may
+        span several agent steps (tool calls); each in-flight step's message
+        carries ``finish == "tool"`` while the loop continues, so only a
+        non-``tool`` finish (``stop``/``error``/``stopped``/``length``/...) is
+        treated as done. Messages are returned newest-first, and only messages
+        newer than ``user_created`` (i.e. this turn's) are considered, which
+        avoids mistaking a previous turn's reply for the current one.
+        """
+        deadline = time.monotonic() + self._task_timeout
+        while time.monotonic() < deadline:
+            try:
+                resp = await self._client.get(
+                    f"/api/session/{session_id}/message",
+                    params={"order": "desc", "limit": 32},
+                )
+                resp.raise_for_status()
+                messages = (resp.json() or {}).get("data") or []
+            except httpx.HTTPError as e:
+                logger.warning("opencode message poll failed: %s", e)
+                await asyncio.sleep(self._poll_interval)
+                continue
+
+            for msg in messages:
+                created = (msg.get("time") or {}).get("created")
+                # Newest-first: once we reach this turn's user message (or
+                # anything older), there is no newer assistant reply yet.
+                if created is None or created <= user_created:
+                    break
+                if msg.get("type") == "assistant":
+                    finish = msg.get("finish")
+                    if finish is not None and finish != "tool":
+                        return msg
+                    # Newest reply of this turn is still generating (or mid
+                    # tool-loop); wait and poll again.
+                    break
+
+            await asyncio.sleep(self._poll_interval)
+
+        logger.warning(
+            "opencode turn timed out after %ss (session %s)",
+            int(self._task_timeout),
+            session_id,
+        )
+        return None
 
 
-def _extract_assistant_text(payload: Any) -> str:
-    """Pull the text of the latest assistant message from a v2 message list."""
-    messages = (payload or {}).get("data") or []
-    for msg in messages:
-        if not isinstance(msg, dict) or msg.get("type") != "assistant":
-            continue
-        if msg.get("error"):
-            err = msg["error"]
-            detail = err.get("message") if isinstance(err, dict) else str(err)
-            return f"opencode error: {detail}"
-        chunks = [
-            c.get("text", "")
-            for c in (msg.get("content") or [])
-            if isinstance(c, dict) and c.get("type") == "text" and c.get("text")
-        ]
-        text = "\n".join(chunks).strip()
-        if text:
-            return text
-    return ""
+def _message_text(msg: Dict[str, Any]) -> str:
+    """Pull the text (or error) out of a completed assistant message."""
+    err = msg.get("error")
+    if err:
+        detail = err.get("message") if isinstance(err, dict) else str(err)
+        return f"opencode error: {detail}"
+    chunks = [
+        p.get("text", "")
+        for p in (msg.get("content") or [])
+        if isinstance(p, dict) and p.get("type") == "text" and p.get("text")
+    ]
+    return "\n".join(chunks).strip()
