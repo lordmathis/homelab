@@ -4,8 +4,8 @@ requires-python = ">=3.13"
 
 [[package]]
 name = "agents"
-version = "42"
-source = { url = "https://github.com/lordmathis/mikoshi/releases/download/v42/agents-42-py3-none-any.whl" }
+version = "43"
+source = { url = "https://github.com/lordmathis/mikoshi/releases/download/v43/agents-43-py3-none-any.whl" }
 dependencies = [
     { name = "anthropic" },
     { name = "beautifulsoup4" },
@@ -26,7 +26,7 @@ dependencies = [
     { name = "tiktoken" },
 ]
 wheels = [
-    { url = "https://github.com/lordmathis/mikoshi/releases/download/v42/agents-42-py3-none-any.whl", hash = "sha256:8241a3eeba8b119752ce85173795b4c6695c69af29034c5734d6628cc8bad1d0" },
+    { url = "https://github.com/lordmathis/mikoshi/releases/download/v43/agents-43-py3-none-any.whl", hash = "sha256:09a19685417accefaf8e0937c39e5cc0cc1a5551a4fdc3a20cee2c0dca58718a" },
 ]
 
 [package.metadata]
@@ -1046,7 +1046,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agents", url = "https://github.com/lordmathis/mikoshi/releases/download/v42/agents-42-py3-none-any.whl" },
+    { name = "agents", url = "https://github.com/lordmathis/mikoshi/releases/download/v43/agents-43-py3-none-any.whl" },
     { name = "aiohttp", specifier = ">=3.13.4" },
     { name = "caldav", specifier = ">=3.1.0" },
     { name = "firecrawl-py", specifier = ">=1.0.0" },
