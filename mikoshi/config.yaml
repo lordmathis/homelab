@@ -66,3 +66,13 @@ title_generation:
   model: "Gemma-4-E4B"
 
 history_db_path: "./data/mikoshi.db"
+
+search:
+  searxng_url: "http://localhost:9004"
+  firecrawl_api_key: "${FIRECRAWL_API_KEY}"
+
+memory:
+  embed_provider: "llamactl"
+  embed_model: "Qwen3-Embedding-0.6B"
+  vector_size: 1024
+  qdrant_url: "http://localhost:6333"

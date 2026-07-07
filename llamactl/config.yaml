@@ -1,10 +1,10 @@
 server:
   port: 9001
 instances:
-  max_running_instances: 2
+  max_running_instances: 3
   group_limits:
     large: 1
-    small: 1
+    small: 2
   port_range: [8000, 8100]
 auth:
   management_keys:

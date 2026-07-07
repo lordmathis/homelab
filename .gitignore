@@ -20,3 +20,7 @@ code-server/share
 code-server/ssh
 
 *.eim
+
+qdrant/snapshots/
+qdrant/storage/
+qdrant/.qdrant-initialized
