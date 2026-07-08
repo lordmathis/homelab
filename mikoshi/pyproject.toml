@@ -8,11 +8,11 @@ dependencies = [
     "agents",
     "aiohttp>=3.13.4",
     "caldav>=3.1.0",
-    "firecrawl-py>=1.0.0",
+    "firecrawl-py>=4.32.0",
     "geopy>=2.4.1",
     "icalendar>=7.0.3",
     "pyyaml>=6.0.3",
 ]
 
 [tool.uv.sources]
-agents = { url = "https://github.com/lordmathis/mikoshi/releases/download/v44/agents-44-py3-none-any.whl" }
+agents = { url = "https://github.com/lordmathis/mikoshi/releases/download/v45/agents-45-py3-none-any.whl" }
