@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "references": {
+    "mikoshi-src": {
+      "repository": "lordmathis/mikoshi",
+      "branch": "main",
+      "description": "Mikoshi (chat UI / agentic harness) source. For plugin work, existing plugins in this repo are usually sufficient — only consult this when you need to understand or debug something the local examples don't explain."
+    },
+    "llamactl-src": {
+      "repository": "lordmathis/llamactl",
+      "branch": "main",
+      "description": "llamactl (LLM inference server, OpenAI-compatible API) source. This repo only holds its deployment config — only consult the source when config options or runtime behavior are unclear from the deployment files here."
+    }
+  }
+}
