@@ -1,6 +1,6 @@
 ---
 required_tool_servers:
-  - web_tools
+  - web
   - notes
 ---
 
@@ -13,9 +13,11 @@ correct naming convention and format.
 
 ## Steps
 
-### 1. Fetch the page
+### 1. Summarize the page
 
-Call `web_tools__fetch_page` with the provided URL. Extract:
+Call `web__summarize_website` with the provided URL and a focus on extracting the
+recipe. Use a focus like "the recipe: title, full ingredients list with
+quantities and units, and step-by-step instructions". Extract:
 - **Recipe title** — used for both the note filename and the `# Heading`
 - **Ingredients** — full list, preserving quantities and units (separate spices into their own sub-list)
 - **Spices** — listed under a `### Spices` sub-heading within Ingredients
@@ -102,7 +104,7 @@ Tell the user the recipe was saved, including the note name. Example:
 **User:** Save this recipe for me: https://example.com/recipes/spicy-ramen
 
 **Assistant flow:**
-1. Fetch the page
+1. Summarize the page
 2. Extract title "Spicy Miso Ramen", ingredients, and instructions
 3. Derive filename: `spicy_miso_ramen.md`
 4. Check notes — not found

@@ -8,14 +8,14 @@ resolution-markers = [
 
 [[package]]
 name = "agents"
-version = "45"
-source = { url = "https://github.com/lordmathis/mikoshi/releases/download/v45/agents-45-py3-none-any.whl" }
+version = "46"
+source = { url = "https://github.com/lordmathis/mikoshi/releases/download/v46/agents-46-py3-none-any.whl" }
 dependencies = [
     { name = "anthropic" },
     { name = "beautifulsoup4" },
     { name = "ddgs" },
     { name = "fastapi" },
-    { name = "firecrawl" },
+    { name = "firecrawl-py" },
     { name = "httpx" },
     { name = "huggingface-hub" },
     { name = "isort" },
@@ -34,7 +34,7 @@ dependencies = [
     { name = "tiktoken" },
 ]
 wheels = [
-    { url = "https://github.com/lordmathis/mikoshi/releases/download/v45/agents-45-py3-none-any.whl", hash = "sha256:1f286e96b8c52b960a18ca43829ef1e93ff0a16e210fb2efd83f88ebbf0a7cc9" },
+    { url = "https://github.com/lordmathis/mikoshi/releases/download/v46/agents-46-py3-none-any.whl", hash = "sha256:c6323c3b66c1d394b47ee6861bf574ce5cd80ba26f3d00b1006dc5facc8734ec" },
 ]
 
 [package.metadata]
@@ -43,7 +43,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.14.3" },
     { name = "ddgs", specifier = ">=9.10.0" },
     { name = "fastapi", specifier = ">=0.128.0" },
-    { name = "firecrawl", specifier = ">=4.31.0" },
+    { name = "firecrawl-py", specifier = ">=4.32.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "huggingface-hub", specifier = ">=0.36.0" },
     { name = "isort", specifier = ">=7.0.0" },
@@ -490,24 +490,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/b8/00651a0f559862f3bb7d6f7477b192afe3f583cc5e26403b44e59a55ab34/filelock-3.25.2.tar.gz", hash = "sha256:b64ece2b38f4ca29dd3e810287aa8c48182bbecd1ae6e9ae126c9b35f1382694", size = 40480, upload-time = "2026-03-11T20:45:38.487Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a4/a5/842ae8f0c08b61d6484b52f99a03510a3a72d23141942d216ebe81fefbce/filelock-3.25.2-py3-none-any.whl", hash = "sha256:ca8afb0da15f229774c9ad1b455ed96e85a81373065fb10446672f64444ddf70", size = 26759, upload-time = "2026-03-11T20:45:37.437Z" },
-]
-
-[[package]]
-name = "firecrawl"
-version = "4.31.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "httpx" },
-    { name = "nest-asyncio" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-    { name = "websockets" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/7c/a4/a732ce69060d424d1384298c3e1e1d17b0d6315bf02c054a394964c633bc/firecrawl-4.31.0.tar.gz", hash = "sha256:a365de1e27af5188b805ed3be507fce3c409d118f3da4634947180b71adca8ad", size = 199166, upload-time = "2026-06-30T03:00:28.441Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6e/12/c61266298fb6ac24709f5dedabc63f8e8ffa71fa4450cc0bcd5b0ec2eca6/firecrawl-4.31.0-py3-none-any.whl", hash = "sha256:94d14545b1d805eb8c9d2d5fc499a777dea396601620dbd404dc783795885900", size = 248231, upload-time = "2026-06-30T03:00:26.61Z" },
 ]
 
 [[package]]
@@ -1147,7 +1129,6 @@ dependencies = [
     { name = "agents" },
     { name = "aiohttp" },
     { name = "caldav" },
-    { name = "firecrawl-py" },
     { name = "geopy" },
     { name = "icalendar" },
     { name = "pyyaml" },
@@ -1155,10 +1136,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agents", url = "https://github.com/lordmathis/mikoshi/releases/download/v45/agents-45-py3-none-any.whl" },
+    { name = "agents", url = "https://github.com/lordmathis/mikoshi/releases/download/v46/agents-46-py3-none-any.whl" },
     { name = "aiohttp", specifier = ">=3.13.4" },
     { name = "caldav", specifier = ">=3.1.0" },
-    { name = "firecrawl-py", specifier = ">=4.32.0" },
     { name = "geopy", specifier = ">=2.4.1" },
     { name = "icalendar", specifier = ">=7.0.3" },
     { name = "pyyaml", specifier = ">=6.0.3" },

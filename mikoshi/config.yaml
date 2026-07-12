@@ -76,3 +76,6 @@ memory:
   embed_model: "Qwen3-Embedding-0.6B"
   vector_size: 1024
   qdrant_url: "http://localhost:6333"
+
+tracing:
+  endpoint: "http://localhost:6006/v1/traces"
