@@ -42,3 +42,7 @@ code-server *ARGS:
 # SearXNG meta search engine
 searxng *ARGS:
     just -f searxng/justfile {{ ARGS }}
+
+# Phoenix
+phoenix *ARGS:
+    just -f phoenix/justfile {{ ARGS }}

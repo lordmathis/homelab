@@ -1,0 +1,6 @@
+services:
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports:
+      - "9005:6006"
+      - "4317:4317"
