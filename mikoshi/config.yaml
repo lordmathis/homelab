@@ -79,3 +79,5 @@ memory:
 
 tracing:
   endpoint: "http://localhost:6006/v1/traces"
+  project_name: "mikoshi"
+  batch: true
