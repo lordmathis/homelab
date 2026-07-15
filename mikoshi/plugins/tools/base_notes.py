@@ -67,7 +67,7 @@ class GiteaNotes(ToolSetHandler):
                 {
                     "owner": REPO_OWNER,
                     "repo": NOTES_REPO,
-                    "filePath": path,
+                    "path": path,
                     "ref": DEFAULT_BRANCH
                 },
                 context
@@ -107,7 +107,7 @@ class GiteaNotes(ToolSetHandler):
                 {
                     "owner": REPO_OWNER,
                     "repo": NOTES_REPO,
-                    "filePath": filepath,
+                    "path": filepath,
                     "ref": DEFAULT_BRANCH
                 },
                 context
@@ -156,7 +156,7 @@ class GiteaNotes(ToolSetHandler):
                 {
                     "owner": REPO_OWNER,
                     "repo": NOTES_REPO,
-                    "filePath": filepath,
+                    "path": filepath,
                     "content": content,
                     "message": commit_message,
                     "branch_name": DEFAULT_BRANCH
@@ -196,17 +196,34 @@ class GiteaNotes(ToolSetHandler):
         try:
             logger.debug(f"Updating note: filepath='{filepath}'")
 
+            params = {
+                "owner": REPO_OWNER,
+                "repo": NOTES_REPO,
+                "path": filepath,
+                "content": content,
+                "message": commit_message,
+                "branch_name": DEFAULT_BRANCH,
+            }
+            try:
+                existing = await self.call_other_tool(
+                    "gitea__get_file_contents",
+                    {
+                        "owner": REPO_OWNER,
+                        "repo": NOTES_REPO,
+                        "path": filepath,
+                        "ref": DEFAULT_BRANCH,
+                    },
+                    context,
+                )
+                if isinstance(existing, dict) and existing.get("sha"):
+                    params["sha"] = existing["sha"]
+            except Exception as e:
+                logger.debug(f"No existing note at {filepath}, will create: {e}")
+
             await self.call_other_tool(
                 "gitea__create_or_update_file",
-                {
-                    "owner": REPO_OWNER,
-                    "repo": NOTES_REPO,
-                    "filePath": filepath,
-                    "content": content,
-                    "message": commit_message,
-                    "branch_name": DEFAULT_BRANCH
-                },
-                context
+                params,
+                context,
             )
 
             return f"Successfully updated note: {filepath}"

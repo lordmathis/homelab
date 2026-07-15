@@ -33,7 +33,7 @@ class WorkoutToolset(ToolSetHandler):
         try:
             result = await self.call_other_tool(
                 "gitea__get_dir_contents",
-                {"owner": REPO_OWNER, "repo": REPO, "filePath": path, "ref": BRANCH},
+                {"owner": REPO_OWNER, "repo": REPO, "path": path, "ref": BRANCH},
                 context,
             )
             if not result:
@@ -63,7 +63,7 @@ class WorkoutToolset(ToolSetHandler):
         try:
             result = await self.call_other_tool(
                 "gitea__get_file_contents",
-                {"owner": REPO_OWNER, "repo": REPO, "filePath": path, "ref": BRANCH},
+                {"owner": REPO_OWNER, "repo": REPO, "path": path, "ref": BRANCH},
                 context,
             )
             if not result:
@@ -76,7 +76,7 @@ class WorkoutToolset(ToolSetHandler):
             return f"Error reading {path}: {str(e)}"
 
     @tool(
-        description="Write a file to the workouts repo.",
+        description="Write a file to the workouts repo. Creates a new file or updates an existing one.",
         parameters={
             "type": "object",
             "properties": {
@@ -89,14 +89,21 @@ class WorkoutToolset(ToolSetHandler):
     )
     async def write_file(self, path: str, content: str, message: str, context: ToolCallContext = None) -> str:
         try:
-            await self.call_other_tool(
-                "gitea__create_or_update_file",
-                {
-                    "owner": REPO_OWNER, "repo": REPO, "filePath": path,
-                    "content": content, "message": message, "branch_name": BRANCH,
-                },
-                context,
-            )
+            params = {
+                "owner": REPO_OWNER, "repo": REPO, "path": path,
+                "content": content, "message": message, "branch_name": BRANCH,
+            }
+            try:
+                existing = await self.call_other_tool(
+                    "gitea__get_file_contents",
+                    {"owner": REPO_OWNER, "repo": REPO, "path": path, "ref": BRANCH},
+                    context,
+                )
+                if isinstance(existing, dict) and existing.get("sha"):
+                    params["sha"] = existing["sha"]
+            except Exception as e:
+                logger.debug(f"No existing file at {path}, will create: {e}")
+            await self.call_other_tool("gitea__create_or_update_file", params, context)
             return f"Saved: {path}"
         except Exception as e:
             return f"Error writing {path}: {str(e)}"
