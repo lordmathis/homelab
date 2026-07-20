@@ -44,8 +44,8 @@ class WorkoutToolset(ToolSetHandler):
     async def read_file(self, path: str, context: ToolCallContext = None) -> str:
         try:
             result = await self.call_other_tool(
-                "gitea__get_file_content",
-                {"owner": REPO_OWNER, "repo": REPO, "filePath": path, "ref": BRANCH},
+                "gitea__get_file_contents",
+                {"owner": REPO_OWNER, "repo": REPO, "path": path, "ref": BRANCH},
                 context,
             )
             if not result:
@@ -73,27 +73,23 @@ class WorkoutToolset(ToolSetHandler):
         },
     )
     async def write_file(self, path: str, content: str, message: str, context: ToolCallContext = None) -> str:
-        base = {
-            "owner": REPO_OWNER, "repo": REPO, "filePath": path,
+        params = {
+            "owner": REPO_OWNER, "repo": REPO, "path": path,
             "content": content, "message": message, "branch_name": BRANCH,
         }
         try:
             existing = await self.call_other_tool(
-                "gitea__get_file_content",
-                {"owner": REPO_OWNER, "repo": REPO, "filePath": path, "ref": BRANCH},
+                "gitea__get_file_contents",
+                {"owner": REPO_OWNER, "repo": REPO, "path": path, "ref": BRANCH},
                 context,
             )
+            if isinstance(existing, dict) and existing.get("sha"):
+                params["sha"] = existing["sha"]
         except Exception as e:
             logger.debug("No existing file at %s, will create: %s", path, e)
-            existing = None
 
         try:
-            if isinstance(existing, dict) and existing.get("sha"):
-                await self.call_other_tool(
-                    "gitea__update_file", {**base, "sha": existing["sha"]}, context
-                )
-            else:
-                await self.call_other_tool("gitea__create_file", base, context)
+            await self.call_other_tool("gitea__create_or_update_file", params, context)
             return f"Saved: {path}"
         except Exception as e:
             return f"Error writing {path}: {str(e)}"
