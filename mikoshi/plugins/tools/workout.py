@@ -126,19 +126,27 @@ class WorkoutToolset(ToolSetHandler):
         sets = session.get("sets", [])
         if not sets:
             progress = "no sets logged yet"
-            last_set = ""
         else:
-            last = sets[-1]
-            name = last["name"]
-            count = sum(1 for s in sets if s["name"] == name)
-            last_set = f'{name} {last["weight"]} {last["reps"]}'
-            sets_word = "set" if count == 1 else "sets"
-            progress = f"{name}: {count} {sets_word} (last {last_set})"
+            groups = {}
+            order = []
+            for s in sets:
+                name = s["name"]
+                if name not in groups:
+                    groups[name] = []
+                    order.append(name)
+                groups[name].append((s["weight"], s["reps"]))
+            parts = []
+            for name in order:
+                entries = groups[name]
+                count = len(entries)
+                sets_word = "set" if count == 1 else "sets"
+                entries_str = ", ".join(f"{w} {r}" for w, r in entries)
+                parts.append(f"{name} {entries_str} ({count} {sets_word})")
+            progress = "; ".join(parts)
         return {
             "status": "active",
             "date": session["date"],
             "progress": progress,
-            "last_set": last_set,
         }
 
     def _render_markdown(self, session: dict) -> str:
