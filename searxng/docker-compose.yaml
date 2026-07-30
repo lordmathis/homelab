@@ -12,8 +12,24 @@ services:
 configs:
   searxng_settings:
     content: |
-      use_default_settings: true
+      use_default_settings:
+        engines:
+          remove:
+            - duckduckgo
+            - duckduckgo images
+            - duckduckgo videos
+            - duckduckgo news
+
       search:
         formats:
           - html
           - json
+
+      engines:
+        - name: braveapi
+          engine: braveapi
+          api_key: "${SEARXNG_BRAVE_API_KEY}"
+          results_per_page: 20
+          inactive: false
+        - name: bing
+          disabled: false

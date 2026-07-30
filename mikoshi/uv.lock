@@ -8,8 +8,8 @@ resolution-markers = [
 
 [[package]]
 name = "agents"
-version = "50"
-source = { url = "https://github.com/lordmathis/mikoshi/releases/download/v50/agents-50-py3-none-any.whl" }
+version = "51"
+source = { url = "https://github.com/lordmathis/mikoshi/releases/download/v51/agents-51-py3-none-any.whl" }
 dependencies = [
     { name = "anthropic" },
     { name = "arize-phoenix-otel" },
@@ -38,7 +38,7 @@ dependencies = [
     { name = "tiktoken" },
 ]
 wheels = [
-    { url = "https://github.com/lordmathis/mikoshi/releases/download/v50/agents-50-py3-none-any.whl", hash = "sha256:067315ce926191e41002dfe5422886228d6bda14ada1d75d6f8647e32f486bdb" },
+    { url = "https://github.com/lordmathis/mikoshi/releases/download/v51/agents-51-py3-none-any.whl", hash = "sha256:2cc37be2c5bd9c546048b1864596dd0ed4f956b9138bbefd87b73ce9170036ae" },
 ]
 
 [package.metadata]
@@ -1163,7 +1163,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agents", url = "https://github.com/lordmathis/mikoshi/releases/download/v50/agents-50-py3-none-any.whl" },
+    { name = "agents", url = "https://github.com/lordmathis/mikoshi/releases/download/v51/agents-51-py3-none-any.whl" },
     { name = "aiohttp", specifier = ">=3.13.4" },
     { name = "caldav", specifier = ">=3.1.0" },
     { name = "geopy", specifier = ">=2.4.1" },
