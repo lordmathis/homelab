@@ -42,6 +42,13 @@ providers:
   z-ai:
     api_base: "https://api.z.ai/api/coding/paas/v4"
     api_key: "${ZAI_API_KEY}"
+  doubleword-async:
+    api_base: "https://api.doubleword.ai/v1"
+    api_key: "${DOUBLEWORD_API_KEY}"
+    service_tier: "flex"
+  doubleword-realtime:
+    api_base: "https://api.doubleword.ai/v1"
+    api_key: "${DOUBLEWORD_API_KEY}"
 
 logging:
   target: "stdout"
