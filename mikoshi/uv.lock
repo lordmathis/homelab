@@ -8,8 +8,8 @@ resolution-markers = [
 
 [[package]]
 name = "agents"
-version = "52"
-source = { url = "https://github.com/lordmathis/mikoshi/releases/download/v52/agents-52-py3-none-any.whl" }
+version = "0.1.0"
+source = { git = "https://github.com/lordmathis/mikoshi.git?branch=main#64e468b3f632d4cd4516be301962ccd3a479da2d" }
 dependencies = [
     { name = "anthropic" },
     { name = "arize-phoenix-otel" },
@@ -36,38 +36,6 @@ dependencies = [
     { name = "rich" },
     { name = "sqlalchemy" },
     { name = "tiktoken" },
-]
-wheels = [
-    { url = "https://github.com/lordmathis/mikoshi/releases/download/v52/agents-52-py3-none-any.whl", hash = "sha256:11b55d9da3d9e87413a5a6fdc907a2a9ebc574e445665280429f8a6c93da64ae" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "anthropic", specifier = ">=0.77.0" },
-    { name = "arize-phoenix-otel", specifier = ">=0.16.1" },
-    { name = "beautifulsoup4", specifier = ">=4.14.3" },
-    { name = "ddgs", specifier = ">=9.10.0" },
-    { name = "fastapi", specifier = ">=0.128.0" },
-    { name = "firecrawl-py", specifier = ">=4.32.0" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "huggingface-hub", specifier = ">=0.36.0" },
-    { name = "isort", specifier = ">=7.0.0" },
-    { name = "lxml", specifier = ">=6.0.2" },
-    { name = "markdownify", specifier = ">=1.2.2" },
-    { name = "mcp", specifier = ">=1.25.0" },
-    { name = "openai", specifier = ">=2.14.0" },
-    { name = "openinference-instrumentation-anthropic", specifier = ">=1.0.6" },
-    { name = "openinference-instrumentation-openai", specifier = ">=0.1.52" },
-    { name = "openinference-semantic-conventions", specifier = ">=0.1.30" },
-    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.43.0" },
-    { name = "opentelemetry-sdk", specifier = ">=1.43.0" },
-    { name = "prompt-toolkit", specifier = ">=3.0.0" },
-    { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "python-dotenv", specifier = ">=1.2.1" },
-    { name = "qdrant-client", specifier = ">=1.18.0" },
-    { name = "rich", specifier = ">=14.2.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.45" },
-    { name = "tiktoken", specifier = ">=0.13.0" },
 ]
 
 [[package]]
@@ -1163,7 +1131,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agents", url = "https://github.com/lordmathis/mikoshi/releases/download/v52/agents-52-py3-none-any.whl" },
+    { name = "agents", git = "https://github.com/lordmathis/mikoshi.git?branch=main" },
     { name = "aiohttp", specifier = ">=3.13.4" },
     { name = "caldav", specifier = ">=3.1.0" },
     { name = "geopy", specifier = ">=2.4.1" },

@@ -2,7 +2,7 @@
 
 PLIST_NAME := "lab.mikoshi.plist"
 PLIST_SRC  := justfile_directory() / PLIST_NAME
-PLIST_DST  := env_var("HOME") / "Library/LaunchAgents" / PLIST_NAME
+PLIST_DST  := env("HOME") / "Library/LaunchAgents" / PLIST_NAME
 
 # Show available commands
 default:
