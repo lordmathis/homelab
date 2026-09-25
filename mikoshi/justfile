@@ -31,7 +31,8 @@ restart: && stop start
 
 # Sync dependencies using uv
 update:
-    uv sync
+    nvm use --lts
+    uv lock --upgrade && uv sync
 
 # Install/update gitea-mcp binary
 update-mcps:
