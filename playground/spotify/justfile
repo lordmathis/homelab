@@ -1,0 +1,16 @@
+# Spotify library indexer
+
+default:
+    @just --list --unsorted
+
+# Authenticate with Spotify (opens browser, caches refresh token)
+auth:
+    uv run spotify-indexer auth
+
+# Sync library: harvest tracks, fetch lyrics, embed into Qdrant
+sync:
+    uv run spotify-indexer sync
+
+# Index and cache stats
+status:
+    uv run spotify-indexer status

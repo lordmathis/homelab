@@ -62,6 +62,10 @@ Real-time system monitoring dashboard using [Glances](https://github.com/nicolar
 
 Web-based log viewer using ttyd + tmux + lnav. Each service gets its own tmux window with lnav following logs.
 
+### Playground
+
+Smaller projects and experiments.
+
 ### Reachy
 
 Voice-driven agent for the Reachy Mini robot. A standalone Python process (`reachy/voice_assistant/`) listens for a wake word, transcribes speech via the audio service, sends it to mikoshi for processing, and speaks the response back. A mikoshi plugin (`reachy`) and tool server expose robot control to the agent.
