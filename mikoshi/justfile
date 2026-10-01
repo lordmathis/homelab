@@ -31,6 +31,10 @@ restart: && stop start
 
 # Sync dependencies using uv
 update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export NVM_DIR="$HOME/.nvm"
+    . "$NVM_DIR/nvm.sh"
     nvm use --lts
     uv lock --upgrade && uv sync
 
