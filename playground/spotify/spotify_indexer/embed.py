@@ -10,10 +10,12 @@ RETRIES = 3
 
 def embed_texts(cfg: Config, texts: list[str]) -> list[list[float]]:
     vectors: list[list[float]] = []
+    total = len(texts)
     with httpx.Client(timeout=120) as client:
-        for i in range(0, len(texts), BATCH_SIZE):
+        for i in range(0, total, BATCH_SIZE):
             batch = texts[i : i + BATCH_SIZE]
             vectors.extend(_embed_batch(cfg, client, batch))
+            print(f"  embedded {min(i + BATCH_SIZE, total)}/{total} via {cfg.embed_model}")
     return vectors
 
 

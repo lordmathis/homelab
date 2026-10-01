@@ -8,9 +8,9 @@ version = "0.1.0"
 description = "Spotify library semantic search: lyrics + metadata embedded into Qdrant"
 requires-python = ">=3.13"
 dependencies = [
-    "spotipy>=2.25.0",
+    "spotipy>=2.26.0",
     "httpx>=0.28.0",
-    "qdrant-client>=1.14.0",
+    "qdrant-client==1.17.1",
     "typer>=0.15.0",
     "python-dotenv>=1.0.0",
 ]

@@ -64,7 +64,6 @@ def payload_for(track: Track, content_hash: str) -> dict:
         "year": track.year,
         "duration_s": track.duration_ms // 1000,
         "popularity": track.popularity,
-        "genres": track.genres,
         "playlists": track.playlists,
         "saved": track.saved,
         "lyrics": track.lyrics,

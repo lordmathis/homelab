@@ -6,7 +6,7 @@ from spotipy.oauth2 import SpotifyPKCE
 
 from .config import Config, PROJECT_DIR
 
-SCOPES = "user-library-read playlist-read-private playlist-read-collaborative"
+SCOPES = "user-library-read playlist-read-private"
 
 
 @dataclass
@@ -21,7 +21,6 @@ class Track:
     popularity: int
     saved: bool = False
     playlists: list[str] = field(default_factory=list)
-    genres: list[str] = field(default_factory=list)
     lyrics: str | None = None
 
 
@@ -69,40 +68,38 @@ def harvest(sp: spotipy.Spotify) -> dict[str, Track]:
             playlists=[playlist] if playlist else [],
         )
 
+    print("  Harvesting liked songs...")
     for page in _paginate(sp, sp.current_user_saved_tracks(limit=50)):
         for item in page["items"]:
             add(item["track"], saved=True)
+    print(f"    liked songs: {len(tracks)} tracks")
 
+    print("  Harvesting saved albums...")
+    album_count = 0
+    before = len(tracks)
     for page in _paginate(sp, sp.current_user_saved_albums(limit=50)):
         for item in page["items"]:
+            album_count += 1
             album = item["album"]
             year = album.get("release_date", "")[:4] or None
             for t in album["tracks"]["items"]:
                 add(t, album=album["name"], year=year, saved=True)
+    print(f"    saved albums: {album_count} albums ({len(tracks) - before} new tracks)")
 
+    print("  Harvesting playlists...")
+    me = sp.me()["id"]
     for page in _paginate(sp, sp.current_user_playlists(limit=50)):
         for pl in page["items"]:
-            for pl_page in _paginate(sp, sp.playlist_items(pl["id"], limit=100)):
-                for item in pl_page["items"]:
-                    add(item.get("track"), playlist=pl["name"])
-
-    genre_map = _artist_genres(sp, {aid for t in tracks.values() for aid in t.artist_ids})
-    for track in tracks.values():
-        genres: list[str] = []
-        for aid in track.artist_ids:
-            for g in genre_map.get(aid, []):
-                if g not in genres:
-                    genres.append(g)
-        track.genres = genres[:6]
+            if pl["owner"]["id"] != me:
+                continue
+            before = len(tracks)
+            try:
+                for pl_page in _paginate(sp, sp.playlist_items(pl["id"], limit=100)):
+                    for item in pl_page["items"]:
+                        add(item.get("track") or item.get("item"), playlist=pl["name"])
+            except spotipy.SpotifyException as e:
+                print(f"    Skipping inaccessible playlist '{pl['name']}' ({e.http_status})")
+                continue
+            print(f"    playlist '{pl['name']}': {len(tracks) - before} new tracks")
 
     return tracks
-
-
-def _artist_genres(sp: spotipy.Spotify, artist_ids: set[str]) -> dict[str, list[str]]:
-    genres: dict[str, list[str]] = {}
-    ids = sorted(artist_ids)
-    for i in range(0, len(ids), 50):
-        resp = sp.artists(ids[i : i + 50])
-        for artist in resp["artists"]:
-            genres[artist["id"]] = artist.get("genres", [])
-    return genres

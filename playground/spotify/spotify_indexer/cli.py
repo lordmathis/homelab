@@ -11,8 +11,6 @@ app = typer.Typer(no_args_is_help=True)
 
 def embedding_text(track: spotify.Track) -> str:
     header = ", ".join(track.artists)
-    if track.genres:
-        header += f". Genres: {', '.join(track.genres)}."
     if track.lyrics:
         return f"{header}\nLyrics:\n{track.lyrics}"
     return header
@@ -34,6 +32,7 @@ def auth() -> None:
 @app.command()
 def sync(
     force: bool = typer.Option(False, "--force", help="Re-embed everything, ignoring stored hashes."),
+    limit: int = typer.Option(None, "--limit", help="Only index the first N tracks (for testing)."),
 ) -> None:
     """Harvest library, fetch lyrics, and index into Qdrant."""
     cfg = Config.load()
@@ -43,7 +42,11 @@ def sync(
     sp = spotify.client(cfg)
     typer.echo("Harvesting library from Spotify...")
     tracks = spotify.harvest(sp)
-    typer.echo(f"Found {len(tracks)} unique tracks")
+    if limit is not None:
+        typer.echo(f"Found {len(tracks)} unique tracks, limiting to {limit}")
+        tracks = dict(list(tracks.items())[:limit])
+    else:
+        typer.echo(f"Found {len(tracks)} unique tracks")
 
     qdrant = store.client(cfg.qdrant_url)
     store.ensure_collection(qdrant, cfg.qdrant_collection, cfg.vector_size)
@@ -56,6 +59,8 @@ def sync(
     typer.echo("Fetching lyrics from LRCLIB...")
     lyrics.init(cfg)
     uncached = [t for t in tracks.values() if t.lyrics is None]
+    if not uncached:
+        typer.echo("  all lyrics already cached")
     with ThreadPoolExecutor(max_workers=4) as pool:
         futures = {pool.submit(lyrics.fetch_lyrics, t): t for t in uncached}
         done = 0
@@ -63,8 +68,8 @@ def sync(
             track = futures[future]
             track.lyrics = future.result()
             done += 1
-            if done % 50 == 0 or done == len(uncached):
-                typer.echo(f"  lyrics: {done}/{len(uncached)} fetched")
+            status = f"{len(track.lyrics)} chars" if track.lyrics else "no match"
+            typer.echo(f"  lyrics {done}/{len(uncached)}: {', '.join(track.artists)} - {track.name} ({status})")
 
     records = [(track, content_hash(track)) for track in tracks.values()]
     if force:
@@ -76,9 +81,13 @@ def sync(
     typer.echo(f"Embedding {len(changed)} tracks ({len(unchanged)} unchanged)...")
     if changed:
         vectors = embed.embed_texts(cfg, [embedding_text(t) for t, _ in changed])
+        typer.echo(f"Upserting {len(changed)} points into '{cfg.qdrant_collection}'...")
         store.upsert(qdrant, cfg.qdrant_collection, changed, vectors)
-    store.update_payloads(qdrant, cfg.qdrant_collection, unchanged)
+    if unchanged:
+        typer.echo(f"Refreshing payloads for {len(unchanged)} unchanged tracks...")
+        store.update_payloads(qdrant, cfg.qdrant_collection, unchanged)
 
+    typer.echo("Pruning stale points...")
     pruned = store.prune(qdrant, cfg.qdrant_collection, set(tracks.keys()))
     with_lyrics = sum(1 for t in tracks.values() if t.lyrics)
     typer.echo(
