@@ -19,3 +19,6 @@ COPY set-zsh.sh /entrypoint.d/
 
 # start opencode serve for the mikoshi bridge
 COPY opencode-serve.sh /entrypoint.d/
+
+# reap idle opencode TUI sessions so they don't pin ~1GB each forever
+COPY opencode-reaper.sh /entrypoint.d/
