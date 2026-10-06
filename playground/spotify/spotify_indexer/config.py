@@ -20,12 +20,14 @@ class Config:
     embed_model: str
     vector_size: int
     lyrics_min_interval: float
+    lastfm_api_key: str | None
+    lastfm_user: str | None
 
     @classmethod
     def load(cls) -> "Config":
         return cls(
             spotify_client_id=os.environ.get("SPOTIFY_CLIENT_ID"),
-            spotify_redirect_uri=os.environ.get("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8888/callback"),
+            spotify_redirect_uri=os.environ.get("SPOTIFY_REDIRECT_URI", "http://localhost:8888/callback"),
             llamactl_api_base_url=os.environ.get("LLAMACTL_API_BASE_URL"),
             llamactl_api_key=os.environ.get("LLAMACTL_API_KEY"),
             qdrant_url=os.environ.get("QDRANT_URL", "http://localhost:6333"),
@@ -33,6 +35,8 @@ class Config:
             embed_model=os.environ.get("EMBED_MODEL", "Qwen3-Embedding-0.6B"),
             vector_size=int(os.environ.get("VECTOR_SIZE", "1024")),
             lyrics_min_interval=float(os.environ.get("LYRICS_MIN_INTERVAL", "1.0")),
+            lastfm_api_key=os.environ.get("LASTFM_API_KEY"),
+            lastfm_user=os.environ.get("LASTFM_USER"),
         )
 
     def require_spotify(self) -> None:

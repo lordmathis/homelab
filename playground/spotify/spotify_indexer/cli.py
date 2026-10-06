@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import typer
 
-from . import embed, lyrics, spotify, store
+from . import embed, lastfm, lyrics, spotify, store
 from .config import Config, PROJECT_DIR
 
 app = typer.Typer(no_args_is_help=True)
@@ -55,6 +55,8 @@ def sync(
         existing = stored.get(track.id)
         if existing:
             track.lyrics = existing.get("lyrics")
+            track.playcount = existing.get("playcount") or 0
+            track.last_played = existing.get("last_played")
 
     typer.echo("Fetching lyrics from LRCLIB...")
     lyrics.init(cfg)
@@ -70,6 +72,15 @@ def sync(
             done += 1
             status = f"{len(track.lyrics)} chars" if track.lyrics else "no match"
             typer.echo(f"  lyrics {done}/{len(uncached)}: {', '.join(track.artists)} - {track.name} ({status})")
+
+    if cfg.lastfm_api_key and cfg.lastfm_user:
+        typer.echo("Fetching listening history from Last.fm...")
+        lastfm.init(cfg)
+        history, full = lastfm.fetch_history(cfg)
+        matched = lastfm.apply_history(tracks, history, full)
+        typer.echo(f"  matched {matched}/{len(tracks)} tracks to scrobbles ({'full backfill' if full else 'incremental'})")
+    else:
+        typer.echo("Skipping Last.fm history (LASTFM_API_KEY / LASTFM_USER not set)")
 
     records = [(track, content_hash(track)) for track in tracks.values()]
     if force:
@@ -87,8 +98,12 @@ def sync(
         typer.echo(f"Refreshing payloads for {len(unchanged)} unchanged tracks...")
         store.update_payloads(qdrant, cfg.qdrant_collection, unchanged)
 
-    typer.echo("Pruning stale points...")
-    pruned = store.prune(qdrant, cfg.qdrant_collection, set(tracks.keys()))
+    if limit is not None:
+        typer.echo("Skipping prune (--limit set)")
+        pruned = 0
+    else:
+        typer.echo("Pruning stale points...")
+        pruned = store.prune(qdrant, cfg.qdrant_collection, set(tracks.keys()))
     with_lyrics = sum(1 for t in tracks.values() if t.lyrics)
     typer.echo(
         f"Done: {len(tracks)} tracks indexed ({with_lyrics} with lyrics, "

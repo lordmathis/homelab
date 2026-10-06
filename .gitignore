@@ -26,3 +26,4 @@ qdrant/storage/
 qdrant/.qdrant-initialized
 
 playground/spotify/.cache
+playground/spotify/lastfm_state.json

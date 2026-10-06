@@ -26,7 +26,9 @@ def ensure_collection(c: QdrantClient, collection: str, vector_size: int) -> Non
 
 def stored_payloads(c: QdrantClient, collection: str) -> dict[str, dict]:
     payloads: dict[str, dict] = {}
-    for _, payload in _scroll_payloads(c, collection, ["track_id", "content_hash", "lyrics"]):
+    for _, payload in _scroll_payloads(
+        c, collection, ["track_id", "content_hash", "lyrics", "playcount", "last_played"]
+    ):
         if payload.get("track_id"):
             payloads[payload["track_id"]] = payload
     return payloads
@@ -68,6 +70,8 @@ def payload_for(track: Track, content_hash: str) -> dict:
         "saved": track.saved,
         "lyrics": track.lyrics,
         "has_lyrics": track.lyrics is not None,
+        "playcount": track.playcount,
+        "last_played": track.last_played,
         "spotify_url": f"https://open.spotify.com/track/{track.id}",
     }
 

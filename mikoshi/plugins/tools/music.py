@@ -1,5 +1,7 @@
 import logging
+import math
 import os
+import time
 from collections import Counter
 from typing import Any, Dict, List, Optional
 
@@ -14,6 +16,18 @@ QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 COLLECTION = os.environ.get("QDRANT_COLLECTION", "spotify_tracks")
 EMBED_PROVIDER = os.environ.get("EMBED_PROVIDER", "llamactl")
 EMBED_MODEL = os.environ.get("EMBED_MODEL", "Qwen3-Embedding-0.6B")
+
+OVERFETCH = 100
+RECENCY_HALF_LIFE_S = 90 * 24 * 3600
+FAMILIARITY_SATURATION = 50
+
+
+def _adjusted_score(score: float, payload: Dict[str, Any], recency_bias: float) -> float:
+    last_played = payload.get("last_played") or 0
+    playcount = payload.get("playcount") or 0
+    recency = math.exp(-(time.time() - last_played) / RECENCY_HALF_LIFE_S) if last_played else 0.0
+    familiarity = min(playcount / FAMILIARITY_SATURATION, 1.0)
+    return score * (1 + recency_bias * (0.7 * recency + 0.3 * familiarity))
 
 
 class MusicTools(ToolSetHandler):
@@ -60,8 +74,9 @@ class MusicTools(ToolSetHandler):
             "artist, or any natural-language description (e.g. 'song about heartbreak "
             "with a hopeful ending', 'aggressive metal breakdowns', 'chill synthwave "
             "for driving'). Tracks are matched semantically against artist names and "
-            "lyrics. Use artist= to restrict to one exact artist name, "
-            "include_lyrics=true to also return the full lyrics."
+            "lyrics, then boosted by listening recency and frequency (set "
+            "recency_bias=0 for pure semantic ranking). Use artist= to restrict to one "
+            "exact artist name, include_lyrics=true to also return the full lyrics."
         ),
         parameters={
             "type": "object",
@@ -78,6 +93,10 @@ class MusicTools(ToolSetHandler):
                     "type": "boolean",
                     "description": "Include full lyrics in results (default false).",
                 },
+                "recency_bias": {
+                    "type": "number",
+                    "description": "How strongly to boost recently/frequently played tracks. 0 disables (pure semantic), default 1.",
+                },
                 "limit": {
                     "type": "integer",
                     "description": "Max number of results (default 10, max 50).",
@@ -91,6 +110,7 @@ class MusicTools(ToolSetHandler):
         query: str,
         artist: Optional[str] = None,
         include_lyrics: bool = False,
+        recency_bias: float = 1.0,
         limit: int = 10,
     ) -> Any:
         if not self._client:
@@ -105,26 +125,37 @@ class MusicTools(ToolSetHandler):
             must.append(FieldCondition(key="artists", match=MatchValue(value=artist)))
         query_filter = Filter(must=must) if must else None
 
+        limit = max(1, min(int(limit or 10), 50))
+        fetch_n = limit if recency_bias <= 0 else max(limit, OVERFETCH)
+
         try:
             response = await self._client.query_points(
                 collection_name=COLLECTION,
                 query=vec,
                 query_filter=query_filter,
-                limit=max(1, min(int(limit or 10), 50)),
+                limit=fetch_n,
             )
         except Exception as e:
             logger.error("MusicTools: qdrant search failed: %s", e, exc_info=True)
             return f"Error: failed to search music library: {e}"
 
-        if not response.points:
+        points = list(response.points)
+        if not points:
             return {
                 "results": [],
                 "count": 0,
                 "note": "no matches — is the library indexed? run spotify-indexer sync",
             }
 
+        if recency_bias > 0:
+            points.sort(
+                key=lambda hit: _adjusted_score(hit.score, hit.payload or {}, recency_bias),
+                reverse=True,
+            )
+        points = points[:limit]
+
         results = []
-        for hit in response.points:
+        for hit in points:
             p = hit.payload or {}
             item: Dict[str, Any] = {
                 "name": p.get("name"),
@@ -133,6 +164,8 @@ class MusicTools(ToolSetHandler):
                 "year": p.get("year"),
                 "playlists": p.get("playlists", []),
                 "saved": p.get("saved"),
+                "playcount": p.get("playcount", 0),
+                "last_played": p.get("last_played"),
                 "spotify_url": p.get("spotify_url"),
                 "score": hit.score,
             }

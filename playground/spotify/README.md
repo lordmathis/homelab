@@ -20,6 +20,10 @@ Tracks are the unit of indexing. Each track becomes one Qdrant point: vector = a
 
    QDRANT_URL=http://localhost:6333
    QDRANT_COLLECTION=spotify_tracks
+
+   # Optional: Last.fm listening history (https://www.last.fm/api/account/create)
+   LASTFM_API_KEY=
+   LASTFM_USER=
 ```
 2. `uv sync`
 

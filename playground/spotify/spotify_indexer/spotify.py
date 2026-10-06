@@ -22,6 +22,8 @@ class Track:
     saved: bool = False
     playlists: list[str] = field(default_factory=list)
     lyrics: str | None = None
+    playcount: int = 0
+    last_played: int | None = None
 
 
 def client(cfg: Config) -> spotipy.Spotify:
