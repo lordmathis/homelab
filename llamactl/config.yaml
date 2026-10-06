@@ -9,6 +9,10 @@ instances:
 auth:
   management_keys:
     - ${LLAMACTL_MGMT_KEY}
+  oidc:
+    issuer_url: ${AUTHELIA_DOMAIN}
+    client_id: "llamactl"
+    client_secret: ${OIDC_CLIENT_SECRET}
 backends:
   mlx:
     command: "mlx_lm.server"

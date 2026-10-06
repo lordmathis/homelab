@@ -10,6 +10,11 @@
       "repository": "lordmathis/llamactl",
       "branch": "main",
       "description": "llamactl (LLM inference server, OpenAI-compatible API) source. This repo only holds its deployment config — only consult the source when config options or runtime behavior are unclear from the deployment files here."
+    },
+    "dev-cluster": {
+      "repository": "lordmathis/dev-cluster",
+      "branch": "main",
+      "description": "GitOps k8s dev-cluster. Main entrypoint to the selfhosted network. Traefik serves as a reverse proxy and forwards relevant requests to homelab"
     }
   }
 }
