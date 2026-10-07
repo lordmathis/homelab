@@ -50,7 +50,7 @@ class SkillsTool(ToolSetHandler):
 
     async def initialize(self) -> None:
         await super().initialize()
-        skills_dir = os.environ.get("SKILLS_DIR", "/app/plugins/skills")
+        skills_dir = os.environ.get("SKILLS_DIR", "./plugins/skills")
         self._skills_dir = Path(skills_dir)
         if not self._skills_dir.exists():
             logger.warning(f"Skills directory not found: {self._skills_dir}")
@@ -114,6 +114,11 @@ class SkillsTool(ToolSetHandler):
         }
     )
     async def read_skill(self, skill_name: str) -> Dict[str, Any]:
+        if not self._skills_dir or not self._skills_dir.exists():
+            return {
+                "status": "error",
+                "error": f"Skills directory not found: {self._skills_dir}. Set SKILLS_DIR or run from the mikoshi root.",
+            }
         skill_md = self._resolve_skill_path(skill_name)
         if skill_md is None:
             return {"status": "error", "error": f"Skill '{skill_name}' not found"}
