@@ -17,3 +17,8 @@ backends:
   mlx:
     command: "mlx_lm.server"
     args: []
+  custom:
+    splash:
+      command: "splash"
+      args: ["serve", "--model", "{model}", "--port", "{port}"]
+      health_path: "/ready"

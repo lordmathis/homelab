@@ -7,7 +7,7 @@ brew "tmux"
 
 # LLM Tools
 brew "llama.cpp"
-brew "whisper-cpp"
+brew "incoai/tap/splash"
 
 # Docker
 brew "colima"
