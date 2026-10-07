@@ -1,9 +1,9 @@
 from mikoshi.agents import ReActAgentPlugin
 
 
-class DMAgent(ReActAgentPlugin):
+class GameMasterAgent(ReActAgentPlugin):
     default = False
-    name = "dm"
+    name = "G4M3-M45-3R"
     provider_id = "llamactl"
     model_id = "Qwen3_6-35B-A3B"
     tool_servers = ["adventure"]
