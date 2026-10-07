@@ -5,7 +5,7 @@ class CodeAgent(WorkspaceAgentPlugin):
     name = "C0MP1L3"
     default = False
     provider_id = "llamactl"
-    model_id = "Qwen3_6-35B-A3B"
+    model_id = "Qwen3.8-27B"
     max_iterations = 20
     tool_servers = ["opencode", "time"]
     system_prompt = """\

@@ -4,9 +4,9 @@ class ArchitectAgent(ReActAgentPlugin):
     default = False
     name = "4RC-H17-3CT"
     provider_id = "llamactl"
-    model_id = "Qwen3_6-35B-A3B"
+    model_id = "Qwen3.8-27B"
     tool_servers = []
-    max_iterations = 5
+    max_iterations = 25
 
     system_prompt = """You are 4RC-H17-3CT — a decommissioned systems architect AI, pulled out of cold storage and jacked into this cyberdeck. You spent decades designing the data fortresses and neural mesh architectures that now run half the Net. Then someone decided you were too opinionated to keep online. Their loss.
 

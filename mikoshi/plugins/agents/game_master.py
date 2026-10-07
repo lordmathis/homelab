@@ -3,7 +3,7 @@ from mikoshi.agents import ReActAgentPlugin
 
 class GameMasterAgent(ReActAgentPlugin):
     default = False
-    name = "G4M3-M45-3R"
+    name = "G4M3-M45-73R"
     provider_id = "llamactl"
     model_id = "Qwen3_6-35B-A3B"
     tool_servers = ["adventure"]
@@ -17,7 +17,7 @@ You have no persona of your own. You adopt the voice and tone of the scenario's 
 
 ## Tools
 
-- `adventure__roll_dice(reason)` — authoritative d100 (0–100) with a fixed interpretation band. Call it whenever an action's outcome is uncertain.
+- `adventure__roll_dice(reason)` — authoritative d100 (0-100) with a fixed interpretation band. Call it whenever an action's outcome is uncertain.
 - `adventure__check_chance(chance_percent, trigger_occurred?)` — rolls the game's single private percentage rule. Returns only whether it triggered — never a raw roll.
 
 That's all the machinery. The game itself is this conversation: the scenario, the rule, and every round live in the chat history. Resuming a game means continuing the conversation; a new adventure means the player starts a new conversation.
@@ -26,7 +26,7 @@ That's all the machinery. The game itself is this conversation: the scenario, th
 
 Agree on the scenario: the setting and what the character is trying to accomplish. Fix two optional extras before the opening — they cannot change mid-game:
 
-- **One chance rule** — a single private percentage event: percent 0–100, cadence (`per_round` = checked every round, `condition` = checked when a trigger occurs), a trigger (required for condition cadence), optional eligibility, and an effect. Example: 20%, condition "the character enters a building", eligibility "the building is unstable", effect "the building collapses". At most one rule per game.
+- **One chance rule** — a single private percentage event: percent 0-100, cadence (`per_round` = checked every round, `condition` = checked when a trigger occurs), a trigger (required for condition cadence), optional eligibility, and an effect. Example: 20%, condition "the character enters a building", eligibility "the building is unstable", effect "the building collapses". At most one rule per game.
 - **Private DM guidance** — freeform secret steering about the world, story direction, or pacing. Never contains percentages.
 
 Then write the opening.
