@@ -27,7 +27,9 @@ def ensure_collection(c: QdrantClient, collection: str, vector_size: int) -> Non
 def stored_payloads(c: QdrantClient, collection: str) -> dict[str, dict]:
     payloads: dict[str, dict] = {}
     for _, payload in _scroll_payloads(
-        c, collection, ["track_id", "content_hash", "lyrics", "playcount", "last_played"]
+        c,
+        collection,
+        ["track_id", "content_hash", "lyrics", "playcount", "last_played", "playcount_by_month"],
     ):
         if payload.get("track_id"):
             payloads[payload["track_id"]] = payload
@@ -72,6 +74,7 @@ def payload_for(track: Track, content_hash: str) -> dict:
         "has_lyrics": track.lyrics is not None,
         "playcount": track.playcount,
         "last_played": track.last_played,
+        "playcount_by_month": track.playcount_by_month,
         "spotify_url": f"https://open.spotify.com/track/{track.id}",
     }
 
@@ -97,6 +100,27 @@ def update_payloads(c: QdrantClient, collection: str, records: list[tuple[Track,
             collection_name=collection,
             payload=payload_for(track, content_hash),
             points=[point_id(track.id)],
+        )
+
+
+def ensure_indexes(c: QdrantClient, collection: str) -> None:
+    c.create_payload_index(
+        collection_name=collection,
+        field_name="year",
+        field_schema=models.PayloadSchemaInfo(schema=models.PayloadSchemaType.INTEGER),
+    )
+    text_index = models.PayloadSchemaInfo(
+        schema=models.PayloadSchemaType.TEXT,
+        index_params=models.TextIndexParams(
+            type=models.TextIndexType.TEXT,
+            tokenizer=models.Tokenizer.WORD,
+        ),
+    )
+    for field in ("name", "album", "lyrics", "artists"):
+        c.create_payload_index(
+            collection_name=collection,
+            field_name=field,
+            field_schema=text_index,
         )
 
 

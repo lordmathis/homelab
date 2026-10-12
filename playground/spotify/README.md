@@ -2,7 +2,17 @@
 
 Indexes the user's Spotify library via the Spotify Web API, fetches lyrics from [LRCLIB](https://lrclib.net), and stores embeddings in Qdrant.
 
-Tracks are the unit of indexing. Each track becomes one Qdrant point: vector = artist names + plain lyrics; payload = full metadata (album, year, popularity, lyrics, Spotify URL). Lyrics are cached in the payloads — syncs fetch only tracks without lyrics and re-embed only tracks whose embedding text changed.
+Tracks are the unit of indexing. Each track becomes one Qdrant point: vector = artist names + plain lyrics; payload = full metadata (album, release `year` as int, popularity, monthly play counts, lyrics, Spotify URL). Lyrics are cached in the payloads — syncs fetch only tracks without lyrics and re-embed only tracks whose embedding text changed.
+
+Payload fields of note:
+
+- `year` — release year as an **integer** (payload index: integer).
+- `playcount_by_month` — `"YYYY-MM"` (UTC calendar month) → play count buckets from Last.fm, summed over the track's lifetime. Merged incrementally on each sync; replaced wholesale on a full backfill.
+- `name`, `album`, `lyrics`, `artists` — word-tokenizer text indexes for token matching; `year` integer index for range filters. Created idempotently at the end of every sync.
+
+### One-time migration (done once, 2026)
+
+Monthly history for past years lives only on Last.fm's servers — `lastfm_state.json` tracks just the last sync timestamp. To backfill the monthly buckets: delete `lastfm_state.json` once, then run `sync`; a full scrobble backfill (~1–2 min rate-limited) replaces all buckets and rewrites `year` as int. Incremental merges resume forever after.
 
 ## Setup
 

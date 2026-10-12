@@ -57,6 +57,7 @@ def sync(
             track.lyrics = existing.get("lyrics")
             track.playcount = existing.get("playcount") or 0
             track.last_played = existing.get("last_played")
+            track.playcount_by_month = dict(existing.get("playcount_by_month") or {})
 
     typer.echo("Fetching lyrics from LRCLIB...")
     lyrics.init(cfg)
@@ -97,6 +98,9 @@ def sync(
     if unchanged:
         typer.echo(f"Refreshing payloads for {len(unchanged)} unchanged tracks...")
         store.update_payloads(qdrant, cfg.qdrant_collection, unchanged)
+
+    typer.echo("Ensuring payload indexes...")
+    store.ensure_indexes(qdrant, cfg.qdrant_collection)
 
     if limit is not None:
         typer.echo("Skipping prune (--limit set)")

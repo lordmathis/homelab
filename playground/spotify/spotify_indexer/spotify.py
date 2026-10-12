@@ -9,6 +9,15 @@ from .config import Config, PROJECT_DIR
 SCOPES = "user-library-read playlist-read-private"
 
 
+def parse_year(release_date: str | None) -> int | None:
+    if not release_date:
+        return None
+    try:
+        return int(release_date[:4])
+    except ValueError:
+        return None
+
+
 @dataclass
 class Track:
     id: str
@@ -16,7 +25,7 @@ class Track:
     artists: list[str]
     artist_ids: list[str]
     album: str
-    year: str | None
+    year: int | None
     duration_ms: int
     popularity: int
     saved: bool = False
@@ -24,6 +33,7 @@ class Track:
     lyrics: str | None = None
     playcount: int = 0
     last_played: int | None = None
+    playcount_by_month: dict[str, int] = field(default_factory=dict)
 
 
 def client(cfg: Config) -> spotipy.Spotify:
@@ -47,7 +57,7 @@ def _paginate(sp: spotipy.Spotify, first_page: dict):
 def harvest(sp: spotipy.Spotify) -> dict[str, Track]:
     tracks: dict[str, Track] = {}
 
-    def add(t: dict, album: str | None = None, year: str | None = None, saved: bool = False, playlist: str | None = None) -> None:
+    def add(t: dict, album: str | None = None, year: int | None = None, saved: bool = False, playlist: str | None = None) -> None:
         if not t or t.get("is_local") or not t.get("id") or t.get("type", "track") != "track":
             return
         existing = tracks.get(t["id"])
@@ -56,14 +66,16 @@ def harvest(sp: spotipy.Spotify) -> dict[str, Track]:
             if playlist and playlist not in existing.playlists:
                 existing.playlists.append(playlist)
             return
-        release_date = (t.get("album") or {}).get("release_date") or ""
+        release_date = (t.get("album") or {}).get("release_date")
+        if year is None:
+            year = parse_year(release_date)
         tracks[t["id"]] = Track(
             id=t["id"],
             name=t["name"],
             artists=[a["name"] for a in t["artists"]],
             artist_ids=[a["id"] for a in t["artists"]],
             album=album or (t.get("album") or {}).get("name", ""),
-            year=year or release_date[:4] or None,
+            year=year,
             duration_ms=t["duration_ms"],
             popularity=t.get("popularity", 0),
             saved=saved,
@@ -83,7 +95,7 @@ def harvest(sp: spotipy.Spotify) -> dict[str, Track]:
         for item in page["items"]:
             album_count += 1
             album = item["album"]
-            year = album.get("release_date", "")[:4] or None
+            year = parse_year(album.get("release_date"))
             for t in album["tracks"]["items"]:
                 add(t, album=album["name"], year=year, saved=True)
     print(f"    saved albums: {album_count} albums ({len(tracks) - before} new tracks)")
