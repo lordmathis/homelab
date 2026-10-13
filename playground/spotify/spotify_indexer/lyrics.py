@@ -8,7 +8,7 @@ from .config import Config
 from .spotify import Track
 
 LRCLIB_BASE = "https://lrclib.net"
-USER_AGENT = "homelab-spotify-indexer/0.1"
+USER_AGENT = "homelab-spotify-indexer v0.1.0 (https://github.com/lordmathis/homelab)"
 RETRIES = 3
 
 _client: httpx.Client | None = None
@@ -42,7 +42,7 @@ def _request(path: str, params: dict) -> httpx.Response | None:
         try:
             _limiter.acquire()
             resp = _client.get(f"{LRCLIB_BASE}{path}", params=params)
-            if resp.status_code == 429:
+            if resp.status_code in (429, 503):
                 try:
                     delay = float(resp.headers.get("Retry-After"))
                 except (TypeError, ValueError):
@@ -65,15 +65,15 @@ def _strip_timestamps(synced: str) -> str:
 
 
 def fetch_lyrics(track: Track) -> str | None:
-    resp = _request(
-        "/api/get",
-        {
-            "artist_name": track.artists[0],
-            "track_name": track.name,
-            "album_name": track.album or "",
-            "duration": track.duration_ms // 1000,
-        },
-    )
+    duration = track.duration_ms // 1000
+    params = {
+        "artist_name": track.artists[0],
+        "track_name": track.name,
+        "album_name": track.album or "",
+    }
+    if 1 <= duration <= 3600:
+        params["duration"] = duration
+    resp = _request("/api/get", params)
     if resp is not None and resp.status_code == 200:
         body = resp.json()
         plain = body.get("plainLyrics") or _strip_timestamps(body.get("syncedLyrics") or "")
@@ -84,7 +84,6 @@ def fetch_lyrics(track: Track) -> str | None:
     if resp is None or resp.status_code != 200:
         return None
     results = resp.json()
-    duration = track.duration_ms // 1000
     candidates = [
         r
         for r in results

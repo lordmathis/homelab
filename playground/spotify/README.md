@@ -2,7 +2,7 @@
 
 Indexes the user's Spotify library via the Spotify Web API, fetches lyrics from [LRCLIB](https://lrclib.net), and stores embeddings in Qdrant.
 
-Tracks are the unit of indexing. Each track becomes one Qdrant point: vector = artist names + plain lyrics; payload = full metadata (album, release `year` as int, popularity, monthly play counts, lyrics, Spotify URL). Lyrics are cached in the payloads — syncs fetch only tracks without lyrics and re-embed only tracks whose embedding text changed.
+Tracks are the unit of indexing. Each track becomes one Qdrant point: vector = artist names + plain lyrics; payload = full metadata (album, release `year` as int, popularity, monthly play counts, lyrics, Spotify URL). As each track's lyrics arrive from LRCLIB it is embedded and upserted into Qdrant immediately, so an interrupted sync resumes where it left off instead of refetching. Tracks without lyrics are retried on every sync and re-embedded only when their embedding text changes.
 
 Payload fields of note:
 

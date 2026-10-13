@@ -34,7 +34,7 @@ class Config:
             qdrant_collection=os.environ.get("QDRANT_COLLECTION", "spotify_tracks"),
             embed_model=os.environ.get("EMBED_MODEL", "Qwen3-Embedding-0.6B"),
             vector_size=int(os.environ.get("VECTOR_SIZE", "1024")),
-            lyrics_min_interval=float(os.environ.get("LYRICS_MIN_INTERVAL", "1.0")),
+            lyrics_min_interval=float(os.environ.get("LYRICS_MIN_INTERVAL", "0.5")),
             lastfm_api_key=os.environ.get("LASTFM_API_KEY"),
             lastfm_user=os.environ.get("LASTFM_USER"),
         )

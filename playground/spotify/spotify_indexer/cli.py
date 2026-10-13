@@ -64,12 +64,16 @@ def sync(
     uncached = [t for t in tracks.values() if t.lyrics is None]
     if not uncached:
         typer.echo("  all lyrics already cached")
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=1) as pool:
         futures = {pool.submit(lyrics.fetch_lyrics, t): t for t in uncached}
         done = 0
         for future in as_completed(futures):
             track = futures[future]
             track.lyrics = future.result()
+            h = content_hash(track)
+            vector = embed.embed_texts(cfg, [embedding_text(track)])[0]
+            store.upsert(qdrant, cfg.qdrant_collection, [(track, h)], [vector])
+            stored[track.id] = {"content_hash": h}
             done += 1
             status = f"{len(track.lyrics)} chars" if track.lyrics else "no match"
             typer.echo(f"  lyrics {done}/{len(uncached)}: {', '.join(track.artists)} - {track.name} ({status})")
