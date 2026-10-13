@@ -29,7 +29,7 @@ def stored_payloads(c: QdrantClient, collection: str) -> dict[str, dict]:
     for _, payload in _scroll_payloads(
         c,
         collection,
-        ["track_id", "content_hash", "lyrics", "playcount", "last_played", "playcount_by_month"],
+        ["track_id", "content_hash", "lyrics", "lyrics_state", "playcount", "last_played", "playcount_by_month"],
     ):
         if payload.get("track_id"):
             payloads[payload["track_id"]] = payload
@@ -71,6 +71,7 @@ def payload_for(track: Track, content_hash: str) -> dict:
         "playlists": track.playlists,
         "saved": track.saved,
         "lyrics": track.lyrics,
+        "lyrics_state": track.lyrics_state,
         "has_lyrics": track.lyrics is not None,
         "playcount": track.playcount,
         "last_played": track.last_played,
@@ -107,14 +108,11 @@ def ensure_indexes(c: QdrantClient, collection: str) -> None:
     c.create_payload_index(
         collection_name=collection,
         field_name="year",
-        field_schema=models.PayloadSchemaInfo(schema=models.PayloadSchemaType.INTEGER),
+        field_schema=models.PayloadSchemaType.INTEGER,
     )
-    text_index = models.PayloadSchemaInfo(
-        schema=models.PayloadSchemaType.TEXT,
-        index_params=models.TextIndexParams(
-            type=models.TextIndexType.TEXT,
-            tokenizer=models.Tokenizer.WORD,
-        ),
+    text_index = models.TextIndexParams(
+        type=models.TextIndexType.TEXT,
+        tokenizer=models.TokenizerType.WORD,
     )
     for field in ("name", "album", "lyrics", "artists"):
         c.create_payload_index(
@@ -137,10 +135,18 @@ def count(c: QdrantClient, collection: str) -> int:
 
 
 def count_with_lyrics(c: QdrantClient, collection: str) -> int:
+    return _count_field(c, collection, "has_lyrics", True)
+
+
+def count_no_match(c: QdrantClient, collection: str) -> int:
+    return _count_field(c, collection, "lyrics_state", "no_match")
+
+
+def _count_field(c: QdrantClient, collection: str, field: str, value) -> int:
     return c.count(
         collection_name=collection,
         exact=True,
         count_filter=models.Filter(
-            must=[models.FieldCondition(key="has_lyrics", match=models.MatchValue(value=True))]
+            must=[models.FieldCondition(key=field, match=models.MatchValue(value=value))]
         ),
     ).count

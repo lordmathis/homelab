@@ -33,6 +33,7 @@ def auth() -> None:
 def sync(
     force: bool = typer.Option(False, "--force", help="Re-embed everything, ignoring stored hashes."),
     limit: int = typer.Option(None, "--limit", help="Only index the first N tracks (for testing)."),
+    recheck: bool = typer.Option(False, "--recheck-no-match", help="Re-lookup tracks previously marked as having no lyrics on LRCLIB."),
 ) -> None:
     """Harvest library, fetch lyrics, and index into Qdrant."""
     cfg = Config.load()
@@ -55,27 +56,47 @@ def sync(
         existing = stored.get(track.id)
         if existing:
             track.lyrics = existing.get("lyrics")
+            track.lyrics_state = existing.get("lyrics_state") or ("found" if track.lyrics else "pending")
             track.playcount = existing.get("playcount") or 0
             track.last_played = existing.get("last_played")
             track.playcount_by_month = dict(existing.get("playcount_by_month") or {})
 
     typer.echo("Fetching lyrics from LRCLIB...")
     lyrics.init(cfg)
-    uncached = [t for t in tracks.values() if t.lyrics is None]
+    skipped = sum(1 for t in tracks.values() if t.lyrics_state == "no_match")
+    uncached = [
+        t
+        for t in tracks.values()
+        if t.lyrics is None and (recheck or t.lyrics_state != "no_match")
+    ]
     if not uncached:
         typer.echo("  all lyrics already cached")
+    elif skipped:
+        typer.echo(f"  skipping {skipped} tracks marked 'no match' (use --recheck-no-match to re-lookup)")
     with ThreadPoolExecutor(max_workers=1) as pool:
         futures = {pool.submit(lyrics.fetch_lyrics, t): t for t in uncached}
         done = 0
         for future in as_completed(futures):
             track = futures[future]
-            track.lyrics = future.result()
+            result = future.result()
+            track.lyrics = result.lyrics
+            if result.lyrics:
+                track.lyrics_state = "found"
+            elif result.no_match:
+                track.lyrics_state = "no_match"
+            else:
+                track.lyrics_state = "error"
             h = content_hash(track)
             vector = embed.embed_texts(cfg, [embedding_text(track)])[0]
             store.upsert(qdrant, cfg.qdrant_collection, [(track, h)], [vector])
             stored[track.id] = {"content_hash": h}
             done += 1
-            status = f"{len(track.lyrics)} chars" if track.lyrics else "no match"
+            if track.lyrics:
+                status = f"{len(track.lyrics)} chars"
+            elif track.lyrics_state == "no_match":
+                status = "no match"
+            else:
+                status = "error, will retry next sync"
             typer.echo(f"  lyrics {done}/{len(uncached)}: {', '.join(track.artists)} - {track.name} ({status})")
 
     if cfg.lastfm_api_key and cfg.lastfm_user:
@@ -113,9 +134,10 @@ def sync(
         typer.echo("Pruning stale points...")
         pruned = store.prune(qdrant, cfg.qdrant_collection, set(tracks.keys()))
     with_lyrics = sum(1 for t in tracks.values() if t.lyrics)
+    no_match = sum(1 for t in tracks.values() if t.lyrics_state == "no_match")
     typer.echo(
         f"Done: {len(tracks)} tracks indexed ({with_lyrics} with lyrics, "
-        f"{len(changed)} embedded, {pruned} pruned)"
+        f"{no_match} no match, {len(changed)} embedded, {pruned} pruned)"
     )
 
 
@@ -128,7 +150,11 @@ def status() -> None:
         try:
             points = store.count(qdrant, cfg.qdrant_collection)
             with_lyrics = store.count_with_lyrics(qdrant, cfg.qdrant_collection)
-            typer.echo(f"Qdrant [{cfg.qdrant_url}] collection '{cfg.qdrant_collection}': {points} points ({with_lyrics} with lyrics)")
+            no_match = store.count_no_match(qdrant, cfg.qdrant_collection)
+            typer.echo(
+                f"Qdrant [{cfg.qdrant_url}] collection '{cfg.qdrant_collection}': "
+                f"{points} points ({with_lyrics} with lyrics, {no_match} no match)"
+            )
         except Exception:
             typer.echo(f"Qdrant [{cfg.qdrant_url}] reachable, collection '{cfg.qdrant_collection}' not created yet — run sync")
     except Exception as exc:

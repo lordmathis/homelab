@@ -2,17 +2,7 @@
 
 Indexes the user's Spotify library via the Spotify Web API, fetches lyrics from [LRCLIB](https://lrclib.net), and stores embeddings in Qdrant.
 
-Tracks are the unit of indexing. Each track becomes one Qdrant point: vector = artist names + plain lyrics; payload = full metadata (album, release `year` as int, popularity, monthly play counts, lyrics, Spotify URL). As each track's lyrics arrive from LRCLIB it is embedded and upserted into Qdrant immediately, so an interrupted sync resumes where it left off instead of refetching. Tracks without lyrics are retried on every sync and re-embedded only when their embedding text changes.
-
-Payload fields of note:
-
-- `year` — release year as an **integer** (payload index: integer).
-- `playcount_by_month` — `"YYYY-MM"` (UTC calendar month) → play count buckets from Last.fm, summed over the track's lifetime. Merged incrementally on each sync; replaced wholesale on a full backfill.
-- `name`, `album`, `lyrics`, `artists` — word-tokenizer text indexes for token matching; `year` integer index for range filters. Created idempotently at the end of every sync.
-
-### One-time migration (done once, 2026)
-
-Monthly history for past years lives only on Last.fm's servers — `lastfm_state.json` tracks just the last sync timestamp. To backfill the monthly buckets: delete `lastfm_state.json` once, then run `sync`; a full scrobble backfill (~1–2 min rate-limited) replaces all buckets and rewrites `year` as int. Incremental merges resume forever after.
+Each track is one Qdrant point: vector = artist names + plain lyrics, payload = full metadata (album, `year` as int, popularity, monthly play counts, lyrics, Spotify URL). Payload indexes: `name`, `album`, `lyrics`, `artists` (word tokenizer), `year` (integer), `has_lyrics`, `lyrics_state`.
 
 ## Setup
 
@@ -34,7 +24,7 @@ Monthly history for past years lives only on Last.fm's servers — `lastfm_state
    # Optional: Last.fm listening history (https://www.last.fm/api/account/create)
    LASTFM_API_KEY=
    LASTFM_USER=
-```
+   ```
 2. `uv sync`
 
 ## Usage
@@ -44,7 +34,7 @@ Monthly history for past years lives only on Last.fm's servers — `lastfm_state
 uv run spotify-indexer auth
 
 # Sync library: index new tracks, fetch lyrics, embed into Qdrant
-uv run spotify-indexer sync  # --force to re-embed everything, --limit N to index only the first N tracks
+uv run spotify-indexer sync  # --force re-embeds everything, --limit N indexes only the first N tracks, --recheck-no-match re-lookups no-match tracks
 
 # Index stats
 uv run spotify-indexer status

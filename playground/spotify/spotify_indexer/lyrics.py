@@ -1,6 +1,7 @@
 import re
 import threading
 import time
+from typing import NamedTuple
 
 import httpx
 
@@ -64,7 +65,12 @@ def _strip_timestamps(synced: str) -> str:
     return re.sub(r"\[[^\]]*\]", "", synced)
 
 
-def fetch_lyrics(track: Track) -> str | None:
+class Result(NamedTuple):
+    lyrics: str | None
+    no_match: bool
+
+
+def fetch_lyrics(track: Track) -> Result:
     duration = track.duration_ms // 1000
     params = {
         "artist_name": track.artists[0],
@@ -74,15 +80,16 @@ def fetch_lyrics(track: Track) -> str | None:
     if 1 <= duration <= 3600:
         params["duration"] = duration
     resp = _request("/api/get", params)
+    get_definitive = resp is not None and resp.status_code in (200, 404)
     if resp is not None and resp.status_code == 200:
         body = resp.json()
         plain = body.get("plainLyrics") or _strip_timestamps(body.get("syncedLyrics") or "")
         if plain.strip():
-            return plain.strip()
+            return Result(plain.strip(), False)
 
     resp = _request("/api/search", {"q": f"{track.artists[0]} {track.name}"})
     if resp is None or resp.status_code != 200:
-        return None
+        return Result(None, False)
     results = resp.json()
     candidates = [
         r
@@ -93,10 +100,11 @@ def fetch_lyrics(track: Track) -> str | None:
     if not candidates:
         candidates = [r for r in results if r.get("plainLyrics") or r.get("syncedLyrics")]
     if not candidates:
-        return None
+        return Result(None, get_definitive)
     best = min(
         candidates,
         key=lambda r: abs((r.get("duration") or duration) - duration),
     )
     plain = best.get("plainLyrics") or _strip_timestamps(best.get("syncedLyrics") or "")
-    return plain.strip() or None
+    text = plain.strip()
+    return Result(text or None, not text)

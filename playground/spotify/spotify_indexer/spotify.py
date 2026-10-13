@@ -31,6 +31,7 @@ class Track:
     saved: bool = False
     playlists: list[str] = field(default_factory=list)
     lyrics: str | None = None
+    lyrics_state: str = "pending"
     playcount: int = 0
     last_played: int | None = None
     playcount_by_month: dict[str, int] = field(default_factory=dict)
