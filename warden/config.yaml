@@ -35,8 +35,7 @@ services:
     action: just phoenix start
   - name: code-server
     paths: ["code-server/**"]
-    action: docker-compose build && docker-compose up -d
-    workdir: code-server
+    action: just code-server build && just code-server start
   - name: glances
     paths: ["glances/**"]
     action: just glances restart

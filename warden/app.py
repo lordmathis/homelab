@@ -23,11 +23,10 @@ def git(repo, *args):
 def run_action(cfg, svc):
     name = svc["name"]
     log(f"[{name}] running: {svc['action']}")
-    cwd = Path(cfg["repo"]) / svc.get("workdir", "")
     try:
         p = subprocess.run(
             ["bash", "-c", svc["action"]],
-            cwd=cwd,
+            cwd=cfg["repo"],
             capture_output=True,
             text=True,
             timeout=cfg["action_timeout"],
