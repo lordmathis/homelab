@@ -14,4 +14,7 @@ tmux send-keys 'lnav ~/Library/Logs/glances/glances.log ~/Library/Logs/glances/g
 tmux new-window -t logs -n mikoshi
 tmux send-keys 'lnav ~/Library/Logs/mikoshi/mikoshi.log' C-m
 
+tmux new-window -t logs -n warden
+tmux send-keys 'lnav ~/Library/Logs/warden/warden.log ~/Library/Logs/warden/warden.error.log' C-m
+
 tmux attach -t logs

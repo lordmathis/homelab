@@ -1,0 +1,48 @@
+repo: /Users/matus/homelab
+branch: main
+poll_interval: 60
+action_timeout: 600
+
+# Entries are evaluated top to bottom (deps before restarts).
+# Keep warden last: it restarts the daemon itself.
+services:
+  - name: homebrew
+    paths: ["homebrew/**"]
+    action: just brew update
+  - name: llamactl
+    paths: ["llamactl/**"]
+    action: just llamactl restart
+  - name: mikoshi-deps
+    paths: ["mikoshi/pyproject.toml", "mikoshi/uv.lock"]
+    action: just mikoshi update
+  - name: mikoshi
+    paths: ["mikoshi/**"]
+    action: just mikoshi restart
+  - name: audio
+    paths: ["audio/**"]
+    action: just audio restart
+  - name: qdrant
+    paths: ["qdrant/**"]
+    action: just qdrant restart
+  - name: nginx
+    paths: ["nginx/**"]
+    action: just nginx generate
+  - name: searxng
+    paths: ["searxng/**"]
+    action: just searxng start
+  - name: phoenix
+    paths: ["phoenix/**"]
+    action: just phoenix start
+  - name: code-server
+    paths: ["code-server/**"]
+    action: docker-compose build && docker-compose up -d
+    workdir: code-server
+  - name: glances
+    paths: ["glances/**"]
+    action: just glances restart
+  - name: logview
+    paths: ["logview/**"]
+    action: just logview restart
+  - name: warden
+    paths: ["warden/**"]
+    action: launchctl kickstart -k gui/$(id -u)/com.warden

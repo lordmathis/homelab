@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.warden</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/matus/.local/bin/uv</string>
+        <string>run</string>
+        <string>app.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/matus/homelab/warden</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/matus/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/matus/.local/bin</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/matus/Library/Logs/warden/warden.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/matus/Library/Logs/warden/warden.error.log</string>
+</dict>
+</plist>

@@ -1,0 +1,6 @@
+[project]
+name = "warden"
+version = "0.1.0"
+description = "GitOps daemon: polls git, restarts changed services"
+requires-python = ">=3.12"
+dependencies = ["pyyaml"]

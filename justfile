@@ -46,3 +46,7 @@ searxng *ARGS:
 # Phoenix
 phoenix *ARGS:
     just -f phoenix/justfile {{ ARGS }}
+
+# Warden gitops daemon
+warden *ARGS:
+    just -f warden/justfile {{ ARGS }}

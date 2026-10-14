@@ -62,6 +62,10 @@ Real-time system monitoring dashboard using [Glances](https://github.com/nicolar
 
 Web-based log viewer using ttyd + tmux + lnav. Each service gets its own tmux window with lnav following logs.
 
+### Warden
+
+GitOps daemon. Polls the git remote every minute, fast-forward merges, and restarts services whose files changed. Path-to-action mappings live in `warden/config.yaml`; the daemon restarts itself when its own files change.
+
 ### Playground
 
 Smaller projects and experiments.
