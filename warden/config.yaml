@@ -3,8 +3,14 @@ branch: main
 poll_interval: 60
 action_timeout: 600
 
+port: 8400
+check_interval: 30
+check_timeout: 5
+retention_days: 30
+db: data/warden.db
+
 # Entries are evaluated top to bottom (deps before restarts).
-# Keep warden last: it restarts the daemon itself.
+# health_url is optional: local endpoint polled for the dashboard (any 2xx = healthy).
 services:
   - name: homebrew
     paths: ["homebrew/**"]
@@ -12,36 +18,45 @@ services:
   - name: llamactl
     paths: ["llamactl/**"]
     action: just llamactl restart
+    health_url: http://localhost:9001/api/v1/auth/whoami
   - name: mikoshi-deps
     paths: ["mikoshi/pyproject.toml", "mikoshi/uv.lock"]
     action: just mikoshi update
   - name: mikoshi
     paths: ["mikoshi/**"]
     action: just mikoshi restart
+    health_url: http://localhost:9002/
   - name: audio
     paths: ["audio/**"]
     action: just audio restart
+    health_url: http://localhost:9100/docs
   - name: qdrant
     paths: ["qdrant/**"]
     action: just qdrant restart
+    health_url: http://localhost:6333/healthz
   - name: nginx
     paths: ["nginx/**"]
     action: just nginx generate
   - name: searxng
     paths: ["searxng/**"]
     action: just searxng start
+    health_url: http://localhost:9004/healthz
   - name: phoenix
     paths: ["phoenix/**"]
     action: just phoenix start
+    health_url: http://localhost:9005/
   - name: code-server
     paths: ["code-server/**"]
     action: just code-server build && just code-server start
+    health_url: http://localhost:9003/healthz
   - name: glances
     paths: ["glances/**"]
     action: just glances restart
+    health_url: http://localhost:9010/
   - name: logview
     paths: ["logview/**"]
     action: just logview restart
+    health_url: http://localhost:9011/
   - name: warden
     paths: ["warden/**"]
     action: launchctl kickstart -k gui/$(id -u)/com.warden

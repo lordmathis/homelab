@@ -64,7 +64,7 @@ Web-based log viewer using ttyd + tmux + lnav. Each service gets its own tmux wi
 
 ### Warden
 
-GitOps daemon. Polls the git remote every minute, fast-forward merges, and restarts services whose files changed. Path-to-action mappings live in `warden/config.yaml`; the daemon restarts itself when its own files change.
+GitOps daemon: polls git, fast-forward merges, restarts services whose files changed. Runs a dashboard with service health and deploy history. Config lives in `warden/config.yaml`.
 
 ### Playground
 
