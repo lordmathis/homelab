@@ -29,7 +29,11 @@ stop:
 # Restart the mikoshi service
 restart: && stop start
 
-# Sync dependencies using uv
+# Sync dependencies from the lockfile
+sync:
+    uv sync
+
+# Upgrade dependencies and sync
 update:
     #!/usr/bin/env bash
     set -euo pipefail

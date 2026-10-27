@@ -9,21 +9,24 @@ check_timeout: 5
 retention_days: 30
 db: data/warden.db
 
-# Entries are evaluated top to bottom
-services:
+# Tasks run on file changes. Evaluated before services.
+tasks:
   - name: homebrew
     paths: ["homebrew/**"]
     action: just brew update
+  - name: nginx
+    paths: ["nginx/**"]
+    action: just nginx generate
+
+# Health-monitored services. Evaluated top to bottom.
+services:
   - name: llamactl
     paths: ["llamactl/**"]
     action: just llamactl restart
     health_url: http://localhost:9001/api/v1/auth/whoami
-  - name: mikoshi-deps
-    paths: ["mikoshi/pyproject.toml", "mikoshi/uv.lock"]
-    action: just mikoshi update
   - name: mikoshi
     paths: ["mikoshi/**"]
-    action: just mikoshi restart
+    action: just mikoshi sync && just mikoshi restart
     health_url: http://localhost:9002/health
   - name: audio
     paths: ["audio/**"]
@@ -33,9 +36,6 @@ services:
     paths: ["qdrant/**"]
     action: just qdrant restart
     health_url: http://localhost:6333/healthz
-  - name: nginx
-    paths: ["nginx/**"]
-    action: just nginx generate
   - name: searxng
     paths: ["searxng/**"]
     action: just searxng start

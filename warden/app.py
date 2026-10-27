@@ -156,7 +156,7 @@ def cycle(cfg):
     git(repo, "merge", "--ff-only", remote_ref)
     log(f"merged {head[:8]} -> {remote[:8]}, {len(changed)} files changed")
     set_state(head=remote, synced=True)
-    for svc in cfg["services"]:
+    for svc in cfg.get("tasks", []) + cfg.get("services", []):
         matched = [p for p in changed if any(fnmatch.fnmatch(p, pat) for pat in svc["paths"])]
         if matched:
             log(f"[{svc['name']}] changed: {', '.join(matched)}")

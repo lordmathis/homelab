@@ -64,7 +64,7 @@ Web-based log viewer using ttyd + tmux + lnav. Each service gets its own tmux wi
 
 ### Warden
 
-GitOps daemon: polls git, fast-forward merges, restarts services whose files changed. Runs a dashboard with service health and deploy history. Config lives in `warden/config.yaml`.
+GitOps daemon that polls git and restarts services whose files changed with health dashboard.
 
 ### Playground
 

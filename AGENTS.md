@@ -10,4 +10,8 @@ Check README.md for overall project context and setup instructions.
 
 ## Secrets
 
-- domains are considered private and should not be shared publicly
+Domains are considered private and should not be shared publicly
+
+## Comments
+
+Do not write narrative comments. Do not write comments that just repeat what the code does. The only allowed comment is a one-liner that explains a non-trivial detail. No comments is the goal.
