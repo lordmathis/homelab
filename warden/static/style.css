@@ -71,34 +71,4 @@ body {
 
 .spark { width: 100%; height: 36px; display: block; }
 
-.deploy-line {
-  color: var(--muted);
-  font-size: 12.5px;
-  margin-top: 0.5rem;
-  overflow-wrap: anywhere;
-}
-.deploy-line .ok { color: var(--green); }
-.deploy-line .fail { color: var(--red); }
-
 .run { color: #fbbf24; overflow-wrap: anywhere; }
-
-.feed { margin-top: 1.6rem; }
-.feed h2 { font-size: 15px; color: var(--muted); font-weight: 600; }
-
-.deploy-row { border-top: 1px solid var(--border); padding: 0.4rem 0; }
-.deploy-row .row { display: flex; gap: 0.8rem; align-items: baseline; }
-.deploy-row .when { color: var(--muted); min-width: 16ch; }
-.deploy-row .svc { font-weight: 600; }
-.deploy-row .ok { color: var(--green); }
-.deploy-row .fail { color: var(--red); }
-.deploy-row details { margin-top: 0.3rem; }
-.deploy-row pre {
-  margin: 0.3rem 0 0;
-  padding: 0.5rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}

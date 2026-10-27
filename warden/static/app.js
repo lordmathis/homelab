@@ -1,10 +1,8 @@
 const STATE_MS = 5000;
-const DEPLOY_MS = 30000;
 const HISTORY_MS = 60000;
 
 let stateData = null;
 const historyCache = {};
-const openDeploys = new Set();
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -23,13 +21,6 @@ function fmtAgo(ts) {
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
-}
-
-function fmtTime(ts) {
-  return new Date(ts * 1000).toLocaleString(undefined, {
-    month: "short", day: "numeric",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
 }
 
 function fmtDur(s) {
@@ -106,19 +97,6 @@ function sparkline(checks) {
     `<polyline points="${coords.join(" ")}" fill="none" stroke="#7aa2f7" stroke-width="1.5"/></svg>`;
 }
 
-function deployLine(svc, warden) {
-  const action = warden.current_action;
-  if (action && action.service === svc.name) {
-    return `<div class="deploy-line"><span class="run">deploying · ${fmtAgo(action.since)}</span></div>`;
-  }
-  const d = svc.last_deploy;
-  if (!d) return '<div class="deploy-line">never deployed</div>';
-  const status = d.exit_code == null
-    ? '<span class="fail">timeout</span>'
-    : d.exit_code === 0 ? '<span class="ok">✓</span>' : `<span class="fail">✗ exit ${d.exit_code}</span>`;
-  return `<div class="deploy-line">${status} ${esc(d.commit.slice(0, 8))} · ${fmtAgo(d.started_at)} · ${fmtDur(d.duration_s)}</div>`;
-}
-
 function renderCards() {
   if (!stateData) return;
   const el = document.getElementById("cards");
@@ -129,37 +107,8 @@ function renderCards() {
       <div class="head">${healthDot(svc)}<span class="name">${esc(svc.name)}</span>
         <span class="latency">${esc(latencyText(svc))}</span></div>
       ${charts}
-      ${deployLine(svc, stateData.warden)}
     </div>`;
   }).join("");
-}
-
-function renderDeploys(deploys) {
-  const el = document.getElementById("deploys");
-  el.innerHTML = deploys.map((d) => {
-    const id = `${d.service}:${d.started_at}`;
-    const failed = d.exit_code !== 0;
-    const status = d.exit_code == null
-      ? '<span class="fail">timeout</span>'
-      : failed ? `<span class="fail">✗ ${d.exit_code}</span>` : '<span class="ok">✓</span>';
-    const output = failed && d.output
-      ? `<details ${openDeploys.has(id) ? "open" : ""} data-id="${esc(id)}">` +
-        `<summary>output</summary><pre>${esc(d.output)}</pre></details>`
-      : "";
-    return `<div class="deploy-row">
-      <div class="row"><span class="when">${fmtTime(d.started_at)}</span>
-        <span class="svc">${esc(d.service)}</span>
-        <span>${esc(d.commit.slice(0, 8))}</span>
-        ${status}<span>${fmtDur(d.duration_s)}</span></div>
-      ${output}
-    </div>`;
-  }).join("");
-  el.querySelectorAll("details").forEach((det) => {
-    det.addEventListener("toggle", () => {
-      if (det.open) openDeploys.add(det.dataset.id);
-      else openDeploys.delete(det.dataset.id);
-    });
-  });
 }
 
 async function tick() {
@@ -167,15 +116,6 @@ async function tick() {
     stateData = await fetchJson("/api/state");
     renderBar(stateData.warden);
     renderCards();
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-async function tickDeploys() {
-  try {
-    const d = await fetchJson("/api/deploys?limit=50");
-    renderDeploys(d.deploys);
   } catch (e) {
     console.error(e);
   }
@@ -196,8 +136,6 @@ async function tickHistories() {
 }
 
 tick();
-tickDeploys();
 tick().then(tickHistories);
 setInterval(tick, STATE_MS);
-setInterval(tickDeploys, DEPLOY_MS);
 setInterval(tickHistories, HISTORY_MS);

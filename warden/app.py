@@ -216,26 +216,14 @@ def api_state():
         name = svc["name"]
         check = db_query(cfg, "SELECT ts, ok, latency_ms FROM checks WHERE service = ?"
                          " ORDER BY ts DESC LIMIT 1", (name,))
-        deploy = db_query(cfg, 'SELECT commit_sha AS "commit", started_at, duration_s, exit_code FROM deploys'
-                          " WHERE service = ? ORDER BY id DESC LIMIT 1", (name,))
         services.append({
             "name": name,
             "has_health": bool(svc.get("health_url")),
             "last_check": dict(check[0]) if check else None,
-            "last_deploy": dict(deploy[0]) if deploy else None,
         })
     w = snapshot_state()
     w["uptime_s"] = time.time() - w["started_at"]
     return jsonify({"warden": w, "services": services})
-
-
-@app.get("/api/deploys")
-def api_deploys():
-    cfg = warden_cfg()
-    limit = min(int(request.args.get("limit", 50)), 200)
-    rows = db_query(cfg, 'SELECT service, commit_sha AS "commit", started_at, duration_s, exit_code, output'
-                    " FROM deploys ORDER BY id DESC LIMIT ?", (limit,))
-    return jsonify({"deploys": [dict(r) for r in rows]})
 
 
 @app.get("/api/history/<service>")
