@@ -59,3 +59,4 @@ services:
   - name: warden
     paths: ["warden/**"]
     action: launchctl kickstart -k gui/$(id -u)/com.warden
+    health_url: http://localhost:9012/health

@@ -198,6 +198,11 @@ def warden_cfg():
     return app.config["WARDEN"]
 
 
+@app.get("/health")
+def health():
+    return jsonify({"status": "ok"})
+
+
 @app.get("/")
 def index():
     return render_template("index.html")
