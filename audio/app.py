@@ -25,6 +25,11 @@ class TranscriptionResponse(BaseModel):
     text: str
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 @app.post("/v1/audio/transcriptions", response_model=TranscriptionResponse)
 async def create_transcription(
     file: UploadFile = File(...),

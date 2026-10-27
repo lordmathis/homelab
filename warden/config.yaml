@@ -3,14 +3,13 @@ branch: main
 poll_interval: 60
 action_timeout: 600
 
-port: 8400
+port: 9012
 check_interval: 30
 check_timeout: 5
 retention_days: 30
 db: data/warden.db
 
-# Entries are evaluated top to bottom (deps before restarts).
-# health_url is optional: local endpoint polled for the dashboard (any 2xx = healthy).
+# Entries are evaluated top to bottom
 services:
   - name: homebrew
     paths: ["homebrew/**"]
@@ -25,11 +24,11 @@ services:
   - name: mikoshi
     paths: ["mikoshi/**"]
     action: just mikoshi restart
-    health_url: http://localhost:9002/
+    health_url: http://localhost:9002/health
   - name: audio
     paths: ["audio/**"]
     action: just audio restart
-    health_url: http://localhost:9100/docs
+    health_url: http://localhost:9100/health
   - name: qdrant
     paths: ["qdrant/**"]
     action: just qdrant restart
@@ -44,7 +43,7 @@ services:
   - name: phoenix
     paths: ["phoenix/**"]
     action: just phoenix start
-    health_url: http://localhost:9005/
+    health_url: http://localhost:9005/healthz
   - name: code-server
     paths: ["code-server/**"]
     action: just code-server build && just code-server start
