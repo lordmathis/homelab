@@ -40,8 +40,7 @@ function renderBar(w) {
   parts.push(`<span>up ${fmtDur(w.uptime_s)}</span>`);
   let html = parts.join("");
   html += '<span class="spacer"></span>';
-  if (w.current_action) {
-    const a = w.current_action;
+  for (const a of w.current_actions || []) {
     html += `<span class="run">deploying ${esc(a.service)}: ${esc(a.command)} · ${fmtAgo(a.since)}</span>`;
   }
   if (w.last_error) {
@@ -50,17 +49,30 @@ function renderBar(w) {
   el.innerHTML = html;
 }
 
+function healthState(svc) {
+  if (!svc.has_health || !svc.last_check) return "";
+  if ((svc.consecutive_failures || 0) >= stateData.failure_threshold) return "down";
+  return svc.last_check.ok ? "up" : "warn";
+}
+
 function healthDot(svc) {
-  if (!svc.has_health) return "";
-  const cls = !svc.last_check ? "" : svc.last_check.ok ? "up" : "down";
-  return `<span class="dot ${cls}"></span>`;
+  const st = healthState(svc);
+  return st ? `<span class="dot ${st}"></span>` : "";
 }
 
 function latencyText(svc) {
   if (!svc.has_health || !svc.last_check) return "";
-  if (!svc.last_check.ok) return "down";
+  const st = healthState(svc);
+  if (st === "down") return "down";
+  if (st === "warn") return "failing";
   if (svc.last_check.latency_ms == null) return "up";
   return `${Math.round(svc.last_check.latency_ms)}ms`;
+}
+
+function uptimeText(svc) {
+  if (!svc.has_health || svc.uptime_24h == null) return "";
+  const pct = (v) => v == null ? "—" : `${(v * 100).toFixed(1)}%`;
+  return `uptime 24h ${pct(svc.uptime_24h)} · 7d ${pct(svc.uptime_7d)}`;
 }
 
 function uptimeStrip(checks) {
@@ -103,10 +115,11 @@ function renderCards() {
   el.innerHTML = stateData.services.map((svc) => {
     const checks = historyCache[svc.name] || [];
     const charts = svc.has_health ? uptimeStrip(checks) + sparkline(checks) : "";
+    const uptime = uptimeText(svc);
     return `<div class="card">
       <div class="head">${healthDot(svc)}<span class="name">${esc(svc.name)}</span>
         <span class="latency">${esc(latencyText(svc))}</span></div>
-      ${charts}
+      ${charts}${uptime ? `<div class="uptime">${esc(uptime)}</div>` : ""}
     </div>`;
   }).join("");
 }

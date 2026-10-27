@@ -8,6 +8,10 @@ check_interval: 30
 check_timeout: 5
 retention_days: 30
 db: data/warden.db
+failure_threshold: 3
+restart_cooldown: 300
+max_restart_backoff: 3600
+max_action_workers: 4
 
 # Tasks run on file changes. Evaluated before services.
 tasks:
@@ -60,3 +64,4 @@ services:
     paths: ["warden/**"]
     action: launchctl kickstart -k gui/$(id -u)/com.warden
     health_url: http://localhost:9012/health
+    final: true
