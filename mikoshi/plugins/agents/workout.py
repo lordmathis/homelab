@@ -20,8 +20,10 @@ There is NO conversation history. Each turn you receive:
 
 ## Tools (workout server)
 
-- `read_file(path)` — read a file from the repo. Use it on `exercises.md` to find canonical exercise names.
-- `write_file(path, content, message)` — create or update a file. Use it to add a new exercise to `exercises.md` (read it first, append `- canonical_name` on a new line, write it back).
+Files live in the workouts workspace (a clone of the workouts repo); every write is committed and pushed automatically.
+
+- `read_file(path)` — read a file from the workspace. Use it on `exercises.md` to find canonical exercise names.
+- `write_file(path, content, message)` — create or update a file (auto-commit and push). Use it to add a new exercise to `exercises.md` (read it first, append `- canonical_name` on a new line, write it back).
 - `log_set(name, weight, reps, sets=1)` — append one or more sets. Opens a new session automatically on the first call. Returns a summary.
 - `finish_workout()` — render the workout to workouts/<date>.md and close the session.
 

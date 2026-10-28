@@ -1,36 +1,106 @@
 """
-Workout Toolset Plugin - Session-based workout logging over a Gitea markdown repo.
+Workout Toolset Plugin - Session-based workout logging in the workouts workspace.
 
-Agent-facing tools: read_file / write_file (general file ops, used for exercises.md),
-log_set (append sets; lazily opens a session), finish_workout (render markdown, write
-the workout file, close the session).
+Operates directly on the workspace clone of the workouts repo: files are
+read/written on disk, every write is committed and pushed. The repo is
+pulled once per chat before the first tool call.
 """
 
-import base64
+import asyncio
 import datetime
 import json
 import logging
 import os
 from typing import Optional
 
+from mikoshi.agents.streaming import StreamEvent
+from mikoshi.git import GitService
 from mikoshi.tools.context import ToolCallContext
 from mikoshi.tools.toolset_handler import ToolSetHandler, tool
 
 logger = logging.getLogger(__name__)
 
-REPO_OWNER = "Mathis"
-REPO = "workouts"
-BRANCH = "main"
-
 
 class WorkoutToolset(ToolSetHandler):
     server_name = "workout"
+
+    def __init__(self):
+        super().__init__()
+        self._pulled_chats: set = set()
+        self._pull_lock = asyncio.Lock()
+
+    # --- Workspace helpers ----------------------------------------------
+
+    def _root(self, context) -> Optional[str]:
+        if context is None or context.workspace is None:
+            return None
+        return context.workspace.root
+
+    def _resolve(self, root: str, path: str) -> str:
+        full = os.path.realpath(os.path.join(root, path))
+        if full != root and not full.startswith(root + os.sep):
+            raise ValueError("Path is outside the workspace")
+        return full
+
+    def _git(self, context) -> GitService:
+        return GitService(context.workspace.root, context.workspace.workspace_id)
+
+    async def _auth_env(self, context) -> dict:
+        ws = context.workspace
+        token = None
+        if ws.connector and self._tool_manager:
+            token = self._tool_manager.get_connector_token(ws.connector)
+        return await self._git(context).https_auth_env(token)
+
+    async def _ensure_pulled(self, context) -> None:
+        if context.chat_id in self._pulled_chats:
+            return
+        async with self._pull_lock:
+            if context.chat_id in self._pulled_chats:
+                return
+            # Mark pulled even on failure to avoid retrying on every call.
+            self._pulled_chats.add(context.chat_id)
+            try:
+                result = await self._git(context).pull(await self._auth_env(context))
+                logger.info(
+                    "chat_id=%s initial pull success=%s output=%s",
+                    context.chat_id, result.success, result.output,
+                )
+            except Exception as e:
+                logger.warning("chat_id=%s initial pull failed: %s", context.chat_id, e)
+
+    async def _name_chat(self, context, title: str) -> None:
+        tm = self._tool_manager
+        if tm is None:
+            return
+        tm.set_chat_title(context.chat_id, title)
+        if context.stream_queue is not None:
+            await context.stream_queue.put(
+                StreamEvent(
+                    type="chat_renamed",
+                    data={"chat_id": context.chat_id, "title": title},
+                )
+            )
+
+    async def _commit_and_push(self, context, message: str) -> dict:
+        svc = self._git(context)
+        result = await svc.commit(
+            message, context.workspace.git_user_name, context.workspace.git_user_email
+        )
+        if not result.success and "nothing to commit" in result.output:
+            return {"commit": "nothing to commit"}
+        if not result.success:
+            return {"error": f"commit failed: {result.output}"}
+        push = await svc.push(await self._auth_env(context))
+        if not push.success:
+            return {"error": f"push failed: {push.output}", "commit": result.output}
+        return {"commit": result.output, "push": "pushed"}
 
     # --- File tools (general) -------------------------------------------
 
     @tool(
         description=(
-            "Read a file from the workouts repo. Use it on 'exercises.md' to find "
+            "Read a file from the workouts workspace. Use it on 'exercises.md' to find "
             "canonical exercise names."
         ),
         parameters={
@@ -42,25 +112,27 @@ class WorkoutToolset(ToolSetHandler):
         },
     )
     async def read_file(self, path: str, context: ToolCallContext = None) -> str:
+        root = self._root(context)
+        if root is None:
+            return "Error: no workspace linked to this chat."
         try:
-            result = await self.call_other_tool(
-                "gitea__get_file_contents",
-                {"owner": REPO_OWNER, "repo": REPO, "path": path, "ref": BRANCH},
-                context,
-            )
-            if not result:
-                return f"File not found: {path}"
-            content_b64 = result.get("content", "") if isinstance(result, dict) else ""
-            if not content_b64:
-                return f"File is empty: {path}"
-            return base64.b64decode(content_b64).decode("utf-8")
+            await self._ensure_pulled(context)
+            full = self._resolve(root, path)
         except Exception as e:
+            return f"Error reading {path}: {str(e)}"
+        if not os.path.isfile(full):
+            return f"File not found: {path}"
+        try:
+            with open(full, encoding="utf-8") as f:
+                return f.read()
+        except OSError as e:
             return f"Error reading {path}: {str(e)}"
 
     @tool(
         description=(
-            "Create or update a file in the workouts repo. Use it to add a new exercise "
-            "to exercises.md (read it first, append the name, write it back)."
+            "Create or update a file in the workouts workspace. The change is committed "
+            "and pushed automatically. Use it to add a new exercise to exercises.md "
+            "(read it first, append the name, write it back)."
         ),
         parameters={
             "type": "object",
@@ -72,27 +144,27 @@ class WorkoutToolset(ToolSetHandler):
             "required": ["path", "content", "message"],
         },
     )
-    async def write_file(self, path: str, content: str, message: str, context: ToolCallContext = None) -> str:
-        params = {
-            "owner": REPO_OWNER, "repo": REPO, "path": path,
-            "content": content, "message": message, "branch_name": BRANCH,
-        }
+    async def write_file(
+        self, path: str, content: str, message: str, context: ToolCallContext = None
+    ) -> str:
+        root = self._root(context)
+        if root is None:
+            return "Error: no workspace linked to this chat."
         try:
-            existing = await self.call_other_tool(
-                "gitea__get_file_contents",
-                {"owner": REPO_OWNER, "repo": REPO, "path": path, "ref": BRANCH},
-                context,
-            )
-            if isinstance(existing, dict) and existing.get("sha"):
-                params["sha"] = existing["sha"]
-        except Exception as e:
-            logger.debug("No existing file at %s, will create: %s", path, e)
-
-        try:
-            await self.call_other_tool("gitea__create_or_update_file", params, context)
-            return f"Saved: {path}"
+            await self._ensure_pulled(context)
+            full = self._resolve(root, path)
         except Exception as e:
             return f"Error writing {path}: {str(e)}"
+        try:
+            os.makedirs(os.path.dirname(full), exist_ok=True)
+            with open(full, "w", encoding="utf-8") as f:
+                f.write(content)
+        except OSError as e:
+            return f"Error writing {path}: {str(e)}"
+        status = await self._commit_and_push(context, message)
+        if "error" in status:
+            return f"Saved: {path}, but {status['error']}"
+        return f"Saved and pushed: {path}"
 
     # --- Session helpers -------------------------------------------------
 
@@ -196,9 +268,15 @@ class WorkoutToolset(ToolSetHandler):
         },
     )
     async def log_set(self, name, weight, reps, sets=1, context=None):
+        root = self._root(context)
+        if root is None:
+            return json.dumps({"error": "No workspace linked to this chat."})
+        await self._ensure_pulled(context)
         session = self._load_session(context.chat_id)
         if session is None:
-            session = {"date": datetime.date.today().isoformat(), "sets": []}
+            date = datetime.date.today().isoformat()
+            session = {"date": date, "sets": []}
+            await self._name_chat(context, f"Workout {date}")
 
         try:
             count = max(1, int(sets))
@@ -216,7 +294,7 @@ class WorkoutToolset(ToolSetHandler):
     @tool(
         description=(
             "Finish the active workout: render it as markdown, write workouts/<date>.md, "
-            "and close the session. Returns the file path and content."
+            "commit and push, and close the session. Returns the file path and content."
         ),
         parameters={"type": "object", "properties": {}},
     )
