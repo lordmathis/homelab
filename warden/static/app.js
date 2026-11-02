@@ -116,7 +116,7 @@ function renderCards() {
     const checks = historyCache[svc.name] || [];
     const charts = svc.has_health ? uptimeStrip(checks) + sparkline(checks) : "";
     const uptime = uptimeText(svc);
-    return `<div class="card">
+    return `<div class="card${svc.has_logs ? " has-logs" : ""}" data-service="${esc(svc.name)}">
       <div class="head">${healthDot(svc)}<span class="name">${esc(svc.name)}</span>
         <span class="latency">${esc(latencyText(svc))}</span></div>
       ${charts}${uptime ? `<div class="uptime">${esc(uptime)}</div>` : ""}
@@ -152,3 +152,223 @@ tick();
 tick().then(tickHistories);
 setInterval(tick, STATE_MS);
 setInterval(tickHistories, HISTORY_MS);
+
+const LOG_POLL_MS = 2000;
+const TAIL_LINES = 500;
+const PIN_PX = 48;
+
+const drawerState = {
+  open: false,
+  service: null,
+  activeFile: null,
+  files: [],
+  follow: true,
+  filter: "",
+  lastJson: "",
+  search: null,
+};
+
+let drawerBuilt = false;
+
+function buildDrawer() {
+  if (drawerBuilt) return;
+  drawerBuilt = true;
+  document.getElementById("drawer").innerHTML = `
+    <div class="dhead">
+      <span id="dtitle" class="dtitle"></span>
+      <button id="dclose" class="dclose" aria-label="close">×</button>
+    </div>
+    <nav id="dtabs" class="dtabs"></nav>
+    <div class="dtoolbar">
+      <input id="dfilter" type="text" placeholder="filter">
+      <span id="dcount" class="dcount"></span>
+      <label id="dfollow-label" class="dfollow"><input id="dfollow" type="checkbox" checked> follow</label>
+      <button id="dback" class="dback hidden">← tail</button>
+      <input id="dsearch" type="text" placeholder="search (regex)">
+    </div>
+    <div id="logview" class="logview"></div>`;
+  document.getElementById("dclose").addEventListener("click", closeDrawer);
+  document.getElementById("scrim").addEventListener("click", closeDrawer);
+  document.getElementById("dfilter").addEventListener("input", (e) => {
+    drawerState.filter = e.target.value;
+    renderTail();
+  });
+  document.getElementById("dfollow").addEventListener("change", (e) => {
+    drawerState.follow = e.target.checked;
+  });
+  document.getElementById("dsearch").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") runSearch(e.target.value.trim());
+  });
+  document.getElementById("dback").addEventListener("click", exitSearch);
+  document.getElementById("dtabs").addEventListener("click", (e) => {
+    const tab = e.target.closest(".dtab");
+    if (!tab) return;
+    drawerState.activeFile = tab.dataset.file;
+    renderTabs();
+    renderTail();
+  });
+}
+
+function setDrawerMode(searchMode) {
+  const toggle = (id, show) => document.getElementById(id).classList.toggle("hidden", !show);
+  toggle("dtabs", !searchMode);
+  toggle("dfilter", !searchMode);
+  toggle("dcount", !searchMode);
+  toggle("dfollow-label", !searchMode);
+  toggle("dback", searchMode);
+}
+
+function openDrawer(service) {
+  const d = drawerState;
+  d.open = true;
+  d.service = service;
+  d.activeFile = null;
+  d.files = [];
+  d.follow = true;
+  d.filter = "";
+  d.lastJson = "";
+  d.search = null;
+  buildDrawer();
+  document.getElementById("dtitle").textContent = service;
+  document.getElementById("dfilter").value = "";
+  document.getElementById("dsearch").value = "";
+  document.getElementById("dfollow").checked = true;
+  document.getElementById("dtabs").innerHTML = "";
+  document.getElementById("logview").innerHTML = '<div class="hint">loading…</div>';
+  setDrawerMode(false);
+  document.getElementById("scrim").classList.remove("hidden");
+  document.getElementById("drawer").classList.remove("hidden");
+  refreshTail(true);
+}
+
+function closeDrawer() {
+  drawerState.open = false;
+  drawerState.service = null;
+  document.getElementById("scrim").classList.add("hidden");
+  document.getElementById("drawer").classList.add("hidden");
+}
+
+async function refreshTail(force) {
+  const d = drawerState;
+  const service = d.service;
+  if (!service) return;
+  try {
+    const data = await fetchJson(`/api/logs/${encodeURIComponent(service)}?lines=${TAIL_LINES}`);
+    if (d.service !== service) return;
+    const json = JSON.stringify(data);
+    if (!force && json === d.lastJson) return;
+    d.lastJson = json;
+    d.files = data.files;
+    if (!d.files.length || d.files.every((f) => f.lines == null)) {
+      d.activeFile = null;
+      document.getElementById("dtabs").innerHTML = "";
+      document.getElementById("logview").innerHTML = '<div class="hint">no log files</div>';
+      document.getElementById("dcount").textContent = "";
+      return;
+    }
+    if (!d.activeFile || !d.files.some((f) => f.name === d.activeFile)) {
+      const nonEmpty = d.files.find((f) => Array.isArray(f.lines) && f.lines.length);
+      d.activeFile = (nonEmpty || d.files[0]).name;
+      renderTabs();
+    }
+    renderTail();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function followTick() {
+  const d = drawerState;
+  if (!d.open || !d.service || !d.activeFile || !d.follow || d.search) return;
+  refreshTail(false);
+}
+
+function renderTabs() {
+  document.getElementById("dtabs").innerHTML = drawerState.files.map((f) =>
+    `<button class="dtab${f.name === drawerState.activeFile ? " active" : ""}"` +
+    ` data-file="${esc(f.name)}">${esc(f.name)}</button>`).join("");
+}
+
+function renderTail() {
+  const d = drawerState;
+  const file = d.files.find((f) => f.name === d.activeFile);
+  const view = document.getElementById("logview");
+  if (!file) return;
+  if (file.lines == null) {
+    view.innerHTML = '<div class="hint">no log output yet</div>';
+    document.getElementById("dcount").textContent = "";
+    return;
+  }
+  const q = d.filter.toLowerCase();
+  const shown = q ? file.lines.filter((l) => l.toLowerCase().includes(q)) : file.lines;
+  document.getElementById("dcount").textContent = `${shown.length}/${file.lines.length}`;
+  if (!shown.length) {
+    view.innerHTML = '<div class="hint">no matching lines</div>';
+    return;
+  }
+  const pinned = view.scrollHeight - view.scrollTop - view.clientHeight <= PIN_PX;
+  view.innerHTML = shown.map((l) => `<div class="logline">${esc(l)}</div>`).join("");
+  if (pinned) view.scrollTop = view.scrollHeight;
+}
+
+async function runSearch(q) {
+  const d = drawerState;
+  if (!q || !d.service) return;
+  const service = d.service;
+  try {
+    const r = await fetch(`/api/search/${encodeURIComponent(service)}?q=${encodeURIComponent(q)}`);
+    const data = await r.json().catch(() => null);
+    if (d.service !== service) return;
+    if (!r.ok || !data) {
+      d.search = { error: (data && data.error) || `search failed (${r.status})` };
+    } else {
+      d.search = data;
+    }
+  } catch (e) {
+    if (d.service !== service) return;
+    d.search = { error: `search failed: ${e}` };
+  }
+  setDrawerMode(true);
+  renderSearch();
+}
+
+function renderSearch() {
+  const d = drawerState;
+  const view = document.getElementById("logview");
+  if (d.search.error) {
+    view.innerHTML = `<div class="hint">${esc(d.search.error)}</div>`;
+    return;
+  }
+  const parts = [];
+  for (const f of d.search.files) {
+    if (!f.exists) continue;
+    parts.push(`<div class="sfile">${esc(f.name)} · ${f.total} match${f.total === 1 ? "" : "es"}</div>`);
+    for (const m of f.matches) {
+      parts.push(`<div class="smatch"><span class="sloc">${esc(f.name)}:${m.line}</span>${esc(m.text)}</div>`);
+    }
+  }
+  view.innerHTML = parts.join("") || '<div class="hint">no matches</div>';
+}
+
+function exitSearch() {
+  drawerState.search = null;
+  drawerState.follow = true;
+  document.getElementById("dfollow").checked = true;
+  setDrawerMode(false);
+  renderTabs();
+  renderTail();
+}
+
+document.getElementById("cards").addEventListener("click", (e) => {
+  const card = e.target.closest(".card.has-logs");
+  if (!card) return;
+  const svc = stateData && stateData.services.find((s) => s.name === card.dataset.service);
+  if (!svc || !svc.has_logs) return;
+  openDrawer(svc.name);
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && drawerState.open) closeDrawer();
+});
+
+setInterval(followTick, LOG_POLL_MS);

@@ -1,5 +1,6 @@
 import fnmatch
 import logging
+import re
 import sqlite3
 import subprocess
 import threading
@@ -7,6 +8,7 @@ import time
 import traceback
 import urllib.error
 import urllib.request
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -26,6 +28,14 @@ DEFAULTS = {
     "max_restart_backoff": 3600,
     "max_action_workers": 4,
 }
+
+TAIL_BYTES = 256 * 1024
+TAIL_DEFAULT_LINES = 500
+TAIL_MAX_LINES = 2000
+SEARCH_BYTES = 50 * 1024 * 1024
+MATCH_KEEP = 10_000
+MATCH_RETURN = 500
+LINE_TRUNCATE = 2_000
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS deploys (
@@ -267,6 +277,45 @@ def warden_cfg():
     return app.config["WARDEN"]
 
 
+def get_service(cfg, name):
+    return next((s for s in cfg["services"] if s["name"] == name), None)
+
+
+def read_window(path, size):
+    with open(path, "rb") as f:
+        f.seek(0, 2)
+        end = f.tell()
+        f.seek(max(0, end - size))
+        return end, f.read()
+
+
+def tail_file(path, max_lines):
+    try:
+        end, data = read_window(path, TAIL_BYTES)
+    except OSError:
+        return None
+    lines = data.decode("utf-8", errors="replace").splitlines()
+    if end > TAIL_BYTES and lines:
+        lines = lines[1:]
+    return [ln[:LINE_TRUNCATE] for ln in lines[-max_lines:]]
+
+
+def search_file(path, rx):
+    try:
+        _, data = read_window(path, SEARCH_BYTES)
+    except OSError:
+        return {"name": Path(path).name, "exists": False, "total": 0, "matches": []}
+    total = 0
+    kept = deque(maxlen=MATCH_KEEP)
+    for lineno, line in enumerate(data.decode("utf-8", errors="replace").splitlines(), 1):
+        if rx.search(line):
+            total += 1
+            kept.append({"line": lineno, "text": line[:LINE_TRUNCATE]})
+    matches = list(kept)[-MATCH_RETURN:]
+    matches.reverse()
+    return {"name": Path(path).name, "exists": True, "total": total, "matches": matches}
+
+
 @app.get("/health")
 def health():
     return jsonify({"status": "ok"})
@@ -299,6 +348,7 @@ def api_state():
         services.append({
             "name": name,
             "has_health": has_health,
+            "has_logs": bool(svc.get("logs")),
             "last_check": dict(check[0]) if check else None,
             "consecutive_failures": consec.get(name, 0) if has_health else 0,
             "uptime_24h": u24,
@@ -313,12 +363,44 @@ def api_state():
 @app.get("/api/history/<service>")
 def api_history(service):
     cfg = warden_cfg()
-    if service not in [s["name"] for s in cfg["services"]]:
+    if get_service(cfg, service) is None:
         return jsonify({"error": "unknown service"}), 404
     hours = min(float(request.args.get("hours", 24)), 168)
     rows = db_query(cfg, "SELECT ts, ok, latency_ms FROM checks WHERE service = ? AND ts >= ?"
                     " ORDER BY ts ASC", (service, time.time() - hours * 3600))
     return jsonify({"checks": [dict(r) for r in rows]})
+
+
+@app.get("/api/logs/<service>")
+def api_logs(service):
+    cfg = warden_cfg()
+    svc = get_service(cfg, service)
+    if svc is None:
+        return jsonify({"error": "unknown service"}), 404
+    raw = request.args.get("lines", "")
+    try:
+        lines = int(raw) if raw else TAIL_DEFAULT_LINES
+    except ValueError:
+        return jsonify({"error": f"invalid lines: {raw}"}), 500
+    lines = max(1, min(lines, TAIL_MAX_LINES))
+    files = [{"name": Path(p).name, "lines": tail_file(p, lines)} for p in svc.get("logs") or []]
+    return jsonify({"files": files})
+
+
+@app.get("/api/search/<service>")
+def api_search(service):
+    cfg = warden_cfg()
+    svc = get_service(cfg, service)
+    if svc is None:
+        return jsonify({"error": "unknown service"}), 404
+    q = request.args.get("q", "")
+    if not q:
+        return jsonify({"error": "missing q"}), 400
+    try:
+        rx = re.compile(q, re.IGNORECASE)
+    except re.error as e:
+        return jsonify({"error": f"invalid pattern: {e}"}), 400
+    return jsonify({"files": [search_file(p, rx) for p in svc.get("logs") or []]})
 
 
 def flask_loop(cfg):

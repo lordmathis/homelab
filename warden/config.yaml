@@ -28,18 +28,30 @@ services:
     paths: ["llamactl/**"]
     action: just llamactl restart
     health_url: http://localhost:9001/api/v1/auth/whoami
+    logs:
+      - /Users/matus/Library/Logs/llamactl/llamactl.log
+      - /Users/matus/Library/Logs/llamactl/llamactl.error.log
   - name: mikoshi
     paths: ["mikoshi/**"]
     action: just mikoshi sync && just mikoshi restart
     health_url: http://localhost:9002/health
+    logs:
+      - /Users/matus/Library/Logs/mikoshi/mikoshi.log
+      - /Users/matus/Library/Logs/mikoshi/mikoshi.error.log
   - name: audio
     paths: ["audio/**"]
     action: just audio restart
     health_url: http://localhost:9100/health
+    logs:
+      - /Users/matus/Library/Logs/audio/audio.log
+      - /Users/matus/Library/Logs/audio/audio.error.log
   - name: qdrant
     paths: ["qdrant/**"]
     action: just qdrant restart
     health_url: http://localhost:6333/healthz
+    logs:
+      - /Users/matus/Library/Logs/qdrant/qdrant.log
+      - /Users/matus/Library/Logs/qdrant/qdrant.error.log
   - name: searxng
     paths: ["searxng/**"]
     action: just searxng start
@@ -56,6 +68,9 @@ services:
     paths: ["glances/**"]
     action: just glances restart
     health_url: http://localhost:9010/
+    logs:
+      - /Users/matus/Library/Logs/glances/glances.log
+      - /Users/matus/Library/Logs/glances/glances.error.log
   - name: logview
     paths: ["logview/**"]
     action: just logview restart
@@ -64,4 +79,7 @@ services:
     paths: ["warden/**"]
     action: launchctl kickstart -k gui/$(id -u)/com.warden
     health_url: http://localhost:9012/health
+    logs:
+      - /Users/matus/Library/Logs/warden/warden.log
+      - /Users/matus/Library/Logs/warden/warden.error.log
     final: true
