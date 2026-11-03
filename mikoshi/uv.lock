@@ -9,7 +9,7 @@ resolution-markers = [
 [[package]]
 name = "agents"
 version = "0.1.0"
-source = { git = "https://github.com/lordmathis/mikoshi.git?branch=main#ebcf7e591170f912942db45dbc6b1488dd528841" }
+source = { git = "https://github.com/lordmathis/mikoshi.git?branch=main#5ec5af53648f53690fcf02762a30b76f657875b3" }
 dependencies = [
     { name = "anthropic" },
     { name = "beautifulsoup4" },
