@@ -90,12 +90,25 @@ body {
   right: 0;
   bottom: 0;
   width: min(760px, 94vw);
+  min-width: 320px;
   background: var(--panel);
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   z-index: 41;
 }
+
+.dresize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 1;
+}
+.dresize:hover, .dresize.active { background: rgba(122, 162, 247, 0.25); }
 
 .dhead {
   display: flex;

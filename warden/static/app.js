@@ -174,6 +174,7 @@ function buildDrawer() {
   if (drawerBuilt) return;
   drawerBuilt = true;
   document.getElementById("drawer").innerHTML = `
+    <div id="dresize" class="dresize"></div>
     <div class="dhead">
       <span id="dtitle" class="dtitle"></span>
       <button id="dclose" class="dclose" aria-label="close">×</button>
@@ -207,6 +208,41 @@ function buildDrawer() {
     renderTabs();
     renderTail();
   });
+  initResize();
+}
+
+function initResize() {
+  const handle = document.getElementById("dresize");
+  const drawer = document.getElementById("drawer");
+  handle.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    handle.classList.add("active");
+    document.body.style.userSelect = "none";
+    const startX = e.clientX;
+    const startW = drawer.getBoundingClientRect().width;
+    const max = () => window.innerWidth * 0.94;
+    const move = (ev) => {
+      drawer.style.width = `${Math.min(Math.max(startW + startX - ev.clientX, 320), max())}px`;
+    };
+    const up = (ev) => {
+      handle.classList.remove("active");
+      document.body.style.userSelect = "";
+      if (ev.type === "pointerup") {
+        localStorage.setItem("drawerWidth", String(drawer.getBoundingClientRect().width));
+      }
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      handle.removeEventListener("pointercancel", up);
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+    handle.addEventListener("pointercancel", up);
+  });
+  handle.addEventListener("dblclick", () => {
+    localStorage.removeItem("drawerWidth");
+    drawer.style.width = "";
+  });
 }
 
 function setDrawerMode(searchMode) {
@@ -229,6 +265,11 @@ function openDrawer(service) {
   d.lastJson = "";
   d.search = null;
   buildDrawer();
+  const saved = Number(localStorage.getItem("drawerWidth"));
+  if (saved) {
+    document.getElementById("drawer").style.width =
+      `${Math.min(saved, window.innerWidth * 0.94)}px`;
+  }
   document.getElementById("dtitle").textContent = service;
   document.getElementById("dfilter").value = "";
   document.getElementById("dsearch").value = "";
