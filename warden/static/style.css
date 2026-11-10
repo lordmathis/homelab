@@ -179,6 +179,53 @@ body {
   cursor: pointer;
 }
 
+.dhelpbtn {
+  margin-left: auto;
+  flex: none;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.dhelpbtn:hover { color: var(--text); border-color: #7aa2f7; }
+
+.dhelp {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  top: 30%;
+  bottom: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0.7rem 1.1rem 1rem;
+  overflow-y: auto;
+  z-index: 2;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+.dhelp-head { display: flex; align-items: center; }
+.dhelp-head .dclose { margin-left: auto; }
+.dhelp-title { font-weight: 600; font-size: 15px; }
+.dhelp h3 { margin: 0.9rem 0 0.3rem; font-size: 13px; }
+.dhelp p { margin: 0.2rem 0 0.5rem; color: var(--muted); font-size: 12.5px; }
+.dhelp table { border-collapse: collapse; font-size: 12.5px; }
+.dhelp td { padding: 0.25rem 0.9rem 0.25rem 0; vertical-align: top; }
+.dhelp code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: nowrap;
+}
+
 .logview {
   flex: 1;
   overflow-y: auto;

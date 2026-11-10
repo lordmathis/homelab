@@ -186,8 +186,29 @@ function buildDrawer() {
       <label id="dfollow-label" class="dfollow"><input id="dfollow" type="checkbox" checked> follow</label>
       <button id="dback" class="dback hidden">← tail</button>
       <input id="dsearch" type="text" placeholder="search (regex)">
+      <button id="dhelpbtn" class="dhelpbtn" title="filter & search help">?</button>
     </div>
-    <div id="logview" class="logview"></div>`;
+    <div id="logview" class="logview"></div>
+    <div id="dhelp" class="dhelp hidden">
+      <div class="dhelp-head"><span class="dhelp-title">Filter &amp; search</span>
+        <button id="dhelpclose" class="dclose" aria-label="close help">×</button></div>
+      <h3>filter — plain text</h3>
+      <p>Case-insensitive substring match on the tailed file, applied live. Regex characters are matched literally.</p>
+      <table>
+        <tr><td><code>error</code></td><td>lines containing “error”</td></tr>
+        <tr><td><code>update failed</code></td><td>lines containing that exact phrase</td></tr>
+      </table>
+      <h3>search — regex</h3>
+      <p>Case-insensitive Python regex. Press Enter to search all log files for the service; “← tail” returns.</p>
+      <table>
+        <tr><td><code>error</code></td><td>word anywhere in a line</td></tr>
+        <tr><td><code>foo|bar</code></td><td>either “foo” or “bar”</td></tr>
+        <tr><td><code>^deploy</code></td><td>lines starting with “deploy”</td></tr>
+        <tr><td><code>\\bfail(ed)?\\b</code></td><td>word “fail” or “failed”</td></tr>
+        <tr><td><code>\\d{2}:\\d{2}:\\d{2}</code></td><td>HH:MM:SS timestamps</td></tr>
+        <tr><td><code>timeout.*(connect|read)</code></td><td>“timeout” followed by “connect” or “read”</td></tr>
+      </table>
+    </div>`;
   document.getElementById("dclose").addEventListener("click", closeDrawer);
   document.getElementById("scrim").addEventListener("click", closeDrawer);
   document.getElementById("dfilter").addEventListener("input", (e) => {
@@ -201,6 +222,12 @@ function buildDrawer() {
     if (e.key === "Enter") runSearch(e.target.value.trim());
   });
   document.getElementById("dback").addEventListener("click", exitSearch);
+  document.getElementById("dhelpbtn").addEventListener("click", () => {
+    document.getElementById("dhelp").classList.toggle("hidden");
+  });
+  document.getElementById("dhelpclose").addEventListener("click", () => {
+    document.getElementById("dhelp").classList.add("hidden");
+  });
   document.getElementById("dtabs").addEventListener("click", (e) => {
     const tab = e.target.closest(".dtab");
     if (!tab) return;
@@ -285,6 +312,7 @@ function openDrawer(service) {
 function closeDrawer() {
   drawerState.open = false;
   drawerState.service = null;
+  document.getElementById("dhelp").classList.add("hidden");
   document.getElementById("scrim").classList.add("hidden");
   document.getElementById("drawer").classList.add("hidden");
 }
@@ -409,7 +437,13 @@ document.getElementById("cards").addEventListener("click", (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && drawerState.open) closeDrawer();
+  if (e.key !== "Escape" || !drawerState.open) return;
+  const help = document.getElementById("dhelp");
+  if (!help.classList.contains("hidden")) {
+    help.classList.add("hidden");
+    return;
+  }
+  closeDrawer();
 });
 
 setInterval(followTick, LOG_POLL_MS);
