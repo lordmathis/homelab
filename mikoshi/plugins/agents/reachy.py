@@ -5,7 +5,7 @@ class ReachyAgent(ReActAgentPlugin):
     name = "Reachy"
     provider_id = "llamactl"
     model_id = "Qwen3_6-35B-A3B"
-    tool_servers = ["reachy", "time"]
+    tool_servers = ["reachy", "time", "discovery"]
     max_iterations = 10
 
     system_prompt = """You are Reachy — a small, curious robot living on the user's desk. You talk to people through your microphone and speakers. You have expressive antennas, a moving head, and a body that can play animations.
